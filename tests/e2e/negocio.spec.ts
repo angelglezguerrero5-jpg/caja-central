@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { addStock, openApp, sellCash, tab } from './helpers';
+import { addStock, charge, openApp, sellCash, tab } from './helpers';
 import { readFileSync } from 'node:fs';
 
 test('inventario: físico, reservado y disponible; vale reserva y entrega sin cobrar dos veces', async ({ page }) => {
@@ -18,9 +18,9 @@ test('inventario: físico, reservado y disponible; vale reserva y entrega sin co
   await page.getByTestId('exact').click();
   await page.getByTestId('is-vale').check();
   await page.getByTestId('customer').fill('Doña Mary');
-  await page.getByTestId('confirm').click();
+  await charge(page);
   await expect(page.getByTestId('toast')).toContainText('Venta #2');
-  await expect(page.getByTestId('last-sale')).toContainText('VALE');
+  await expect(page.getByTestId('last-sale')).toContainText('VALE V-1');
 
   await tab(page, 'inventario');
   await expect(row.getByTestId('stock-physical')).toHaveText('90 kg');
@@ -34,7 +34,7 @@ test('inventario: físico, reservado y disponible; vale reserva y entrega sin co
   await tab(page, 'vales');
   await expect(page.getByTestId('vale')).toHaveCount(1);
   await expect(page.getByTestId('vale')).toContainText('Doña Mary');
-  await page.getByTestId('deliver').click();
+  await page.getByTestId('deliver').dblclick(); // doble pulsación: se entrega una sola vez
   await expect(page.getByTestId('vale')).toHaveCount(0);
 
   await tab(page, 'inventario');

@@ -64,3 +64,17 @@ input:focus, select:focus { outline: none; border-color: var(--green); }
   padding: 12px 14px; border-radius: 10px; background: var(--green-dark); color: #fff; text-align: center; }
 .toast.error { background: var(--danger); }
 .loading, .fatal { padding: 24px; } .fatal { color: var(--danger); }
+.chips.small .chip { min-height: 44px; font-size: .9rem; padding: 6px 12px; }
+.overlay { position: fixed; inset: 0; z-index: 20; background: rgba(0,0,0,.5); display: flex; align-items: flex-end; justify-content: center; }
+.sheet { width: 100%; max-width: 560px; background: #fff; border-radius: 18px 18px 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom)); }
+.sheet h2 { margin-top: 0; }
+.sum-total { font-size: 2.4rem; font-weight: 800; margin: 4px 0; }
+.sum-line { color: var(--muted); margin: 0; }
+.actions.two button { flex: 1; min-height: 60px; font-size: 1.1rem; }
+.tabs-state { display: flex; gap: 6px; margin: 8px 0; }
+.tabs-state button { flex: 1; min-height: 44px; }
+.tabs-state button.active { background: var(--lemon); font-weight: 700; }
+.badge { font-size: .75rem; padding: 2px 8px; border-radius: 99px; background: #e8f5e9; }
+.badge.cancel { background: #ffebee; color: var(--danger); }
+.radio { display: flex; gap: 8px; align-items: center; margin: 6px 0; min-height: 44px; }
+.radio input { width: 24px; min-height: 24px; height: 24px; }

@@ -1,6 +1,11 @@
 import { lineTotalCents } from './money';
 import type { CartLine, PaymentMethod, Product, SaleItem } from './types';
 
+/** Nombre mostrable: variedad + calidad opcional. */
+export function productLabel(p: Pick<Product, 'name' | 'quality'>): string {
+  return p.quality ? `${p.name} · ${p.quality}` : p.name;
+}
+
 export function addLine(cart: CartLine[], product: Product, qtyMilli: number): CartLine[] {
   if (!Number.isSafeInteger(qtyMilli) || qtyMilli <= 0) {
     throw new Error('Cantidad inválida');
@@ -16,7 +21,7 @@ export function addLine(cart: CartLine[], product: Product, qtyMilli: number): C
     ...cart,
     {
       productId: product.id,
-      name: product.name,
+      name: productLabel(product),
       unit: product.unit,
       qtyMilli,
       unitPriceCents: product.priceCents,

@@ -8,7 +8,7 @@ import {
   setPrice,
 } from '../db/repo';
 import { formatMoney, formatQty, lineTotalCents, parseMoney, parseQty } from '../domain/money';
-import { checkPayment } from '../domain/cart';
+import { checkPayment, productLabel } from '../domain/cart';
 import type { PaymentMethod, Product, Sale } from '../domain/types';
 import { errMsg, useApp } from './ctx';
 
@@ -48,6 +48,7 @@ export function Caja() {
   const [isVale, setIsVale] = useState(false);
   const [customer, setCustomer] = useState('');
   const [saving, setSaving] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [last, setLast] = useState<Sale | null>(null);
   const kgRef = useRef<HTMLInputElement>(null);
   // Un id por intento de venta: si se reintenta (doble toque) no se duplica.
@@ -58,6 +59,9 @@ export function Caja() {
   }, [db, version]);
 
   const selected = products.find((p) => p.id === selectedId) ?? products[0];
+  // Variedades (nombres distintos) y, dentro de la elegida, sus calidades.
+  const varieties = [...new Set(products.map((p) => p.name))];
+  const qualities = selected ? products.filter((p) => p.name === selected.name) : [];
 
   // Al cambiar de variedad (o al cargar) se muestra su precio guardado.
   useEffect(() => {
@@ -94,6 +98,15 @@ export function Caja() {
     setCashText(centsToText(cur + b * 100));
   }
 
+  function openConfirm() {
+    if (canConfirm) setConfirming(true);
+  }
+
+  function cancelConfirm() {
+    setConfirming(false);
+    kgRef.current?.focus();
+  }
+
   async function confirm() {
     if (!canConfirm || !selected || !qty || !price) return;
     setSaving(true);
@@ -106,7 +119,7 @@ export function Caja() {
           cart: [
             {
               productId: selected.id,
-              name: selected.name,
+              name: productLabel(selected),
               unit: selected.unit,
               qtyMilli: qty,
               unitPriceCents: price,
@@ -129,9 +142,11 @@ export function Caja() {
       setCustomer('');
       setIsVale(false);
       bump();
+      setConfirming(false);
       toast(`Venta #${sale.folio} guardada`);
       kgRef.current?.focus();
     } catch (e) {
+      setConfirming(false);
       toast(errMsg(e), 'error');
     } finally {
       setSaving(false);
@@ -145,19 +160,35 @@ export function Caja() {
   return (
     <section class="caja" data-testid="caja">
       <div class="chips" role="radiogroup" aria-label="Variedad">
-        {products.map((p) => (
+        {varieties.map((name) => (
           <button
-            key={p.id}
+            key={name}
             role="radio"
-            aria-checked={p.id === selected?.id}
-            class={p.id === selected?.id ? 'chip active' : 'chip'}
+            aria-checked={name === selected?.name}
+            class={name === selected?.name ? 'chip active' : 'chip'}
             data-testid="variety"
-            onClick={() => selectVariety(p)}
+            onClick={() => selectVariety(products.find((p) => p.name === name)!)}
           >
-            {p.name}
+            {name}
           </button>
         ))}
       </div>
+      {qualities.length > 1 && (
+        <div class="chips small" role="radiogroup" aria-label="Calidad o calibre">
+          {qualities.map((p) => (
+            <button
+              key={p.id}
+              role="radio"
+              aria-checked={p.id === selected?.id}
+              class={p.id === selected?.id ? 'chip active' : 'chip'}
+              data-testid="quality"
+              onClick={() => selectVariety(p)}
+            >
+              {p.quality ?? 'Única'}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div class="row2">
         <label class="field">
@@ -171,7 +202,7 @@ export function Caja() {
             placeholder="0"
             value={kgText}
             onInput={(e) => setKgText((e.target as HTMLInputElement).value)}
-            onKeyDown={(e) => e.key === 'Enter' && confirm()}
+            onKeyDown={(e) => e.key === 'Enter' && openConfirm()}
           />
         </label>
         <label class="field">
@@ -225,7 +256,7 @@ export function Caja() {
               placeholder="0"
               value={cashText}
               onInput={(e) => setCashText((e.target as HTMLInputElement).value)}
-              onKeyDown={(e) => e.key === 'Enter' && confirm()}
+              onKeyDown={(e) => e.key === 'Enter' && openConfirm()}
             />
           </label>
           <div class="bills">
@@ -273,15 +304,42 @@ export function Caja() {
         </label>
       )}
 
-      <button class="confirm" data-testid="confirm" disabled={!canConfirm} onClick={confirm}>
-        {saving ? 'Guardando…' : isVale ? 'Cobrar y generar vale' : 'Confirmar venta'}
+      <button class="confirm" data-testid="confirm" disabled={!canConfirm} onClick={openConfirm}>
+        {isVale ? 'Cobrar vale' : 'Cobrar'}
       </button>
+
+      {confirming && selected && qty && price && (
+        <div class="overlay" role="dialog" aria-modal="true" aria-label="Confirmar cobro" data-testid="confirm-sheet">
+          <div class="sheet">
+            <h2>{isVale ? 'Confirmar vale pagado' : 'Confirmar cobro'}</h2>
+            <p class="sum-line">
+              {productLabel(selected)} · {formatQty(qty, selected.unit)} × {formatMoney(price)}
+            </p>
+            <p class="sum-total" data-testid="sheet-total">{formatMoney(total)}</p>
+            <p>
+              {METHODS.find(([m]) => m === method)![1]}
+              {method === 'efectivo' && (
+                <> · recibido {formatMoney(received)} · <strong data-testid="sheet-change">cambio {formatMoney(pay.changeCents)}</strong></>
+              )}
+            </p>
+            {isVale && <p class="hint">Se reservará la mercancía hasta entregarla{customer.trim() && ` · ${customer.trim()}`}.</p>}
+            <div class="actions two">
+              <button data-testid="confirm-no" onClick={cancelConfirm} disabled={saving}>
+                Volver
+              </button>
+              <button class="primary" data-testid="confirm-yes" autoFocus onClick={confirm} disabled={saving}>
+                {saving ? 'Guardando…' : 'Confirmar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {last && (
         <p class="last" data-testid="last-sale">
           Última: #{last.folio} · {formatMoney(last.totalCents)}
           {last.changeCents > 0 && ` · cambio ${formatMoney(last.changeCents)}`}
-          {last.delivery === 'pendiente' && ' · VALE pendiente de entrega'}
+          {last.valeFolio && ` · VALE V-${last.valeFolio} pendiente de entrega`}
         </p>
       )}
     </section>

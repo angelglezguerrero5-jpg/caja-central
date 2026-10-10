@@ -19,7 +19,14 @@ export const tab = (page: Page, name: 'caja' | 'vales' | 'inventario' | 'corte' 
 export async function sellCash(page: Page, kg: string, bills: number[]) {
   await page.getByTestId('kg').fill(kg);
   for (const b of bills) await page.getByTestId(`bill-${b}`).click();
+  await charge(page);
+}
+
+/** Cobrar: abre la hoja de confirmación y confirma. */
+export async function charge(page: Page) {
   await page.getByTestId('confirm').click();
+  await expect(page.getByTestId('confirm-sheet')).toBeVisible();
+  await page.getByTestId('confirm-yes').click();
   await expect(page.getByTestId('toast')).toContainText('guardada');
 }
 

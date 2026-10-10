@@ -100,6 +100,7 @@ export function Corte() {
         <div><dt>Vales vendidos ({report.valesCount})</dt><dd>{formatMoney(report.valesCents)}</dd></div>
         <div><dt>Fondo inicial</dt><dd>{formatMoney(report.openingCashCents)}</dd></div>
         <div><dt>Salidas de efectivo</dt><dd>−{formatMoney(report.cashOutCents)}</dd></div>
+        <div><dt>Devoluciones de vales</dt><dd data-testid="r-refunds">−{formatMoney(report.refundsCents)}</dd></div>
         <div class="strong"><dt>Efectivo esperado</dt><dd data-testid="r-expected">{formatMoney(report.expectedCashCents)}</dd></div>
       </dl>
       {report.byProduct.length > 0 && (
@@ -159,11 +160,12 @@ export function Corte() {
           </header>
           <p class="hint">
             {s.items.map((i) => `${i.name} ${formatQty(i.qtyMilli, i.unit)}`).join(', ')} · {s.paymentMethod}
-            {s.delivery === 'pendiente' && ' · vale pendiente'}
-            {s.delivery === 'entregado' && ' · vale entregado'}
+            {s.delivery === 'pendiente' && ` · VALE V-${s.valeFolio} pendiente`}
+            {s.delivery === 'entregado' && ` · VALE V-${s.valeFolio} entregado`}
+            {s.delivery === 'cancelado' && ` · VALE V-${s.valeFolio} cancelado`}
             {s.status === 'anulada' && ` · ANULADA (${s.voidReason})`}
           </p>
-          {s.status === 'completada' && (
+          {s.status === 'completada' && s.delivery === 'inmediata' && (
             <button
               class="danger small"
               onClick={() => {

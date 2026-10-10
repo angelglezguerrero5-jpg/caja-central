@@ -7,6 +7,7 @@ import type {
   CashMovement,
   PaymentMethod,
   Product,
+  RefundMethod,
   Sale,
   Shift,
   StockMove,
@@ -14,7 +15,7 @@ import type {
   Unit,
 } from '../domain/types';
 
-type MetaKey = 'nextFolio' | 'currentShiftId' | 'cartDraft';
+type MetaKey = 'nextFolio' | 'nextValeFolio' | 'currentShiftId' | 'cartDraft';
 
 interface LimonesDB extends DBSchema {
   products: { key: string; value: Product };
@@ -106,10 +107,10 @@ export function availableMilli(p: Product): number {
   return p.physicalMilli - p.reservedMilli;
 }
 
-export const DEFAULT_PRODUCTS: Array<Pick<Product, 'name' | 'unit' | 'priceCents'>> = [
-  { name: 'Limón persa', unit: 'kg', priceCents: 3000 },
+export const DEFAULT_PRODUCTS: Array<Pick<Product, 'name' | 'quality' | 'unit' | 'priceCents'>> = [
+  { name: 'Limón persa', quality: 'Primera', unit: 'kg', priceCents: 3000 },
+  { name: 'Limón persa', quality: 'Segunda', unit: 'kg', priceCents: 2000 },
   { name: 'Limón con semilla', unit: 'kg', priceCents: 3500 },
-  { name: 'Limón persa 2da', unit: 'kg', priceCents: 2000 },
 ];
 
 /** Inserta variedades de ejemplo solo si la base está vacía. */
@@ -149,6 +150,7 @@ export async function getProduct(db: DB, id: string): Promise<Product | undefine
 export interface ProductInput {
   id?: string;
   name: string;
+  quality?: string;
   unit: Unit;
   priceCents: number;
   active: boolean;
@@ -157,14 +159,20 @@ export interface ProductInput {
 /** Crea o edita una variedad. La existencia NO se edita aquí (usa movimientos). */
 export async function saveProduct(db: DB, input: ProductInput): Promise<Product> {
   const name = input.name.trim();
+  const quality = input.quality?.trim() || undefined;
   if (!name) throw new Error('El nombre es obligatorio');
   assertPositiveInt(input.priceCents, 'El precio debe ser mayor a cero');
   const tx = rw(db, ['products']);
   const store = tx.objectStore('products');
   const existing: Product | undefined = input.id ? await store.get(input.id) : undefined;
+  const all: Product[] = await store.getAll();
+  if (all.some((p) => p.id !== existing?.id && p.name === name && (p.quality ?? '') === (quality ?? ''))) {
+    throw abortWith(tx, 'Ya existe esa variedad con esa calidad');
+  }
   const product: Product = {
     id: existing?.id ?? input.id ?? newId(),
     name,
+    ...(quality ? { quality } : {}),
     unit: input.unit,
     priceCents: input.priceCents,
     active: input.active,
@@ -415,6 +423,11 @@ export async function createSale(db: DB, input: NewSaleInput): Promise<Sale> {
   const meta = tx.objectStore('meta');
   const shift = await ensureShift(tx, atIso);
   const folio: number = (await meta.get('nextFolio'))?.value ?? 1;
+  let valeFolio: number | undefined;
+  if (input.isVale) {
+    valeFolio = (await meta.get('nextValeFolio'))?.value ?? 1;
+    await meta.put({ key: 'nextValeFolio', value: valeFolio! + 1 });
+  }
   const sale: Sale = {
     id: saleId,
     folio,
@@ -428,12 +441,13 @@ export async function createSale(db: DB, input: NewSaleInput): Promise<Sale> {
     changeCents: pay.changeCents,
     status: 'completada',
     delivery: input.isVale ? 'pendiente' : 'inmediata',
+    ...(valeFolio ? { valeFolio } : {}),
     ...(customerName ? { customerName } : {}),
   };
   await tx.objectStore('sales').add(sale);
   for (const it of items) {
     if (input.isVale) {
-      await moveStock(tx, it.productId, 'reserva', 0, it.qtyMilli, `Vale ${folio}`, atIso, saleId);
+      await moveStock(tx, it.productId, 'reserva', 0, it.qtyMilli, `Vale V-${valeFolio}`, atIso, saleId);
     } else {
       await moveStock(tx, it.productId, 'venta', -it.qtyMilli, 0, `Folio ${folio}`, atIso, saleId);
     }
@@ -459,8 +473,12 @@ export async function listSalesByDay(db: DB, day: string): Promise<Sale[]> {
 
 /** Vales pagados que aún no se entregan (de cualquier día/turno). */
 export async function listPendingVales(db: DB): Promise<Sale[]> {
-  const vales = await db.getAllFromIndex('sales', 'byDelivery', 'pendiente');
-  return vales.filter((s) => s.status === 'completada').sort((a, b) => a.folio - b.folio);
+  return listVales(db, 'pendiente');
+}
+
+export async function listVales(db: DB, state: 'pendiente' | 'entregado' | 'cancelado'): Promise<Sale[]> {
+  const vales = await db.getAllFromIndex('sales', 'byDelivery', state);
+  return vales.sort((a, b) => (state === 'pendiente' ? a.folio - b.folio : b.folio - a.folio));
 }
 
 /**
@@ -471,13 +489,13 @@ export async function deliverVale(db: DB, saleId: string): Promise<Sale> {
   const tx = rw(db, ['sales', 'products', 'stockMoves']);
   const sale: Sale | undefined = await tx.objectStore('sales').get(saleId);
   if (!sale || sale.delivery === 'inmediata') throw abortWith(tx, 'Vale no encontrado');
-  if (sale.status === 'anulada') throw abortWith(tx, 'El vale está anulado');
+  if (sale.delivery === 'cancelado') throw abortWith(tx, 'El vale está cancelado');
   if (sale.delivery === 'entregado') throw abortWith(tx, 'El vale ya fue entregado');
   const at = now();
   const delivered: Sale = { ...sale, delivery: 'entregado', deliveredAt: at };
   await tx.objectStore('sales').put(delivered);
   for (const it of sale.items) {
-    await moveStock(tx, it.productId, 'entrega_vale', -it.qtyMilli, -it.qtyMilli, `Vale ${sale.folio}`, at, sale.id);
+    await moveStock(tx, it.productId, 'entrega_vale', -it.qtyMilli, -it.qtyMilli, `Vale V-${sale.valeFolio}`, at, sale.id);
   }
   await tx.done;
   return delivered;
@@ -491,6 +509,7 @@ export async function voidSale(db: DB, saleId: string, reason: string): Promise<
   const sale: Sale | undefined = await tx.objectStore('sales').get(saleId);
   if (!sale) throw abortWith(tx, 'Venta no encontrada');
   if (sale.status === 'anulada') throw abortWith(tx, 'La venta ya estaba anulada');
+  if (sale.delivery !== 'inmediata') throw abortWith(tx, 'Un vale se cancela desde la pestaña Vales');
   const shift: Shift | undefined = await tx.objectStore('shifts').get(sale.shiftId);
   if (shift?.closedAt) {
     throw abortWith(tx, 'No se puede anular: el turno de esa venta ya fue cerrado');
@@ -498,15 +517,65 @@ export async function voidSale(db: DB, saleId: string, reason: string): Promise<
   const at = now();
   await tx.objectStore('sales').put({ ...sale, status: 'anulada', voidReason: r, voidedAt: at });
   for (const it of sale.items) {
-    if (sale.delivery === 'pendiente') {
-      // Se libera la reserva; físicamente nunca salió.
-      await moveStock(tx, it.productId, 'anulacion', 0, -it.qtyMilli, `Anula ${sale.folio}`, at, sale.id);
-    } else {
-      await moveStock(tx, it.productId, 'anulacion', it.qtyMilli, 0, `Anula ${sale.folio}`, at, sale.id);
-    }
+    await moveStock(tx, it.productId, 'anulacion', it.qtyMilli, 0, `Anula ${sale.folio}`, at, sale.id);
   }
   await tx.done;
   return { ...sale, status: 'anulada', voidReason: r, voidedAt: at };
+}
+
+/**
+ * Cancela un vale PENDIENTE: libera la reserva y registra el motivo. El destino del
+ * dinero se decide explícitamente (nunca se asume que se devuelve efectivo):
+ *  - efectivo: sale de la caja del turno actual (movimiento 'devolucion').
+ *  - transferencia: se devolvió fuera de caja; queda registrado, sin efecto en efectivo.
+ *  - ninguna: no se devolvió dinero (queda anotado).
+ * Se puede cancelar aunque el turno donde se cobró ya esté cerrado.
+ */
+export async function cancelVale(
+  db: DB,
+  saleId: string,
+  reason: string,
+  refundMethod: RefundMethod,
+): Promise<Sale> {
+  const r = reason.trim();
+  if (!r) throw new Error('Indica el motivo de la cancelación');
+  if (!['efectivo', 'transferencia', 'ninguna'].includes(refundMethod)) {
+    throw new Error('Indica qué se hizo con el dinero');
+  }
+  const tx = rw(db, ['sales', 'meta', 'shifts', 'cashMovements', 'products', 'stockMoves']);
+  const sale: Sale | undefined = await tx.objectStore('sales').get(saleId);
+  if (!sale || sale.delivery === 'inmediata') throw abortWith(tx, 'Vale no encontrado');
+  if (sale.delivery === 'cancelado') throw abortWith(tx, 'El vale ya estaba cancelado');
+  if (sale.delivery === 'entregado') throw abortWith(tx, 'El vale ya fue entregado: no se puede cancelar');
+  const at = now();
+  const refundCents = refundMethod === 'ninguna' ? 0 : sale.totalCents;
+  const cancelled: Sale = {
+    ...sale,
+    delivery: 'cancelado',
+    cancelReason: r,
+    cancelledAt: at,
+    refundMethod,
+    refundCents,
+  };
+  await tx.objectStore('sales').put(cancelled);
+  for (const it of sale.items) {
+    await moveStock(tx, it.productId, 'anulacion', 0, -it.qtyMilli, `Cancela V-${sale.valeFolio}`, at, sale.id);
+  }
+  if (refundMethod === 'efectivo') {
+    const shift = await ensureShift(tx, at);
+    const m: CashMovement = {
+      id: newId(),
+      shiftId: shift.id,
+      createdAt: at,
+      type: 'devolucion',
+      amountCents: refundCents,
+      concept: `Devolución vale V-${sale.valeFolio}`,
+      saleId: sale.id,
+    };
+    await tx.objectStore('cashMovements').put(m);
+  }
+  await tx.done;
+  return cancelled;
 }
 
 // ---------- Borrador del carrito ----------
@@ -527,13 +596,14 @@ const DATA_STORES = ['products', 'sales', 'shifts', 'cashMovements', 'stockMoves
 
 export async function exportBackup(db: DB): Promise<Backup> {
   const tx = db.transaction([...DATA_STORES], 'readonly');
-  const [products, sales, shifts, cashMovements, stockMoves, folio] = await Promise.all([
+  const [products, sales, shifts, cashMovements, stockMoves, folio, valeFolio] = await Promise.all([
     tx.objectStore('products').getAll(),
     tx.objectStore('sales').getAll(),
     tx.objectStore('shifts').getAll(),
     tx.objectStore('cashMovements').getAll(),
     tx.objectStore('stockMoves').getAll(),
     tx.objectStore('meta').get('nextFolio'),
+    tx.objectStore('meta').get('nextValeFolio'),
   ]);
   await tx.done;
   return {
@@ -546,6 +616,7 @@ export async function exportBackup(db: DB): Promise<Backup> {
     cashMovements,
     stockMoves,
     nextFolio: (folio?.value as number | undefined) ?? 1,
+    nextValeFolio: (valeFolio?.value as number | undefined) ?? 1,
   };
 }
 
@@ -573,7 +644,12 @@ export function validateBackup(data: unknown): Backup {
   if ((b.nextFolio as number) <= maxFolio) {
     throw new Error('Respaldo inconsistente: el folio siguiente ya fue usado');
   }
-  return b as Backup;
+  const maxVale = b.sales!.reduce((m, s) => Math.max(m, s.valeFolio ?? 0), 0);
+  const nextVale = Number.isSafeInteger(b.nextValeFolio) ? (b.nextValeFolio as number) : maxVale + 1;
+  if (nextVale <= maxVale) {
+    throw new Error('Respaldo inconsistente: el folio de vale siguiente ya fue usado');
+  }
+  return { ...(b as Backup), nextValeFolio: nextVale };
 }
 
 /**
@@ -590,6 +666,7 @@ export async function importBackup(db: DB, data: unknown): Promise<void> {
   for (const m of b.cashMovements) await tx.objectStore('cashMovements').put(m);
   for (const m of b.stockMoves) await tx.objectStore('stockMoves').put(m);
   await tx.objectStore('meta').put({ key: 'nextFolio', value: b.nextFolio });
+  await tx.objectStore('meta').put({ key: 'nextValeFolio', value: b.nextValeFolio });
   const open = b.shifts
     .filter((s) => !s.closedAt)
     .sort((x, y) => y.openedAt.localeCompare(x.openedAt))[0];

@@ -5,6 +5,7 @@ import {
   addCashOut,
   addStockMove,
   availableMilli,
+  cancelVale,
   closeShift,
   createSale,
   deliverVale,
@@ -14,6 +15,8 @@ import {
   getProduct,
   importBackup,
   listPendingVales,
+  listVales,
+  listCashMovements,
   listProducts,
   listSalesByDay,
   listSalesByShift,
@@ -195,18 +198,126 @@ describe('vales (pagados, pendientes de entrega)', () => {
     expect(r.expectedCashCents).toBe(0);
   });
 
-  it('anular un vale pendiente libera la reserva sin mover físico', async () => {
+  it('cancelar un vale pendiente libera la reserva sin mover físico', async () => {
     const p = await firstProduct();
     await addStockMove(db, p.id, 'entrada', kg(10));
     const vale = await createSale(db, {
       cart: addLine([], p, kg(4)), paymentMethod: 'tarjeta', receivedCents: 0, isVale: true,
     });
-    await voidSale(db, vale.id, 'cliente canceló');
+    await cancelVale(db, vale.id, 'cliente canceló', 'transferencia');
     const cur = (await getProduct(db, p.id))!;
     expect(cur.physicalMilli).toBe(kg(10));
     expect(cur.reservedMilli).toBe(0);
     expect(await listPendingVales(db)).toHaveLength(0);
-    await expect(deliverVale(db, vale.id)).rejects.toThrow('anulado');
+    expect((await listVales(db, 'cancelado')).map((v) => v.id)).toEqual([vale.id]);
+    await expect(deliverVale(db, vale.id)).rejects.toThrow('cancelado');
+    await expect(cancelVale(db, vale.id, 'otra vez', 'ninguna')).rejects.toThrow('ya estaba cancelado');
+  });
+
+  it('cada vale tiene su propio folio consecutivo, distinto del de venta', async () => {
+    const p = await firstProduct();
+    const cart = addLine([], p, kg(1));
+    const v1 = await createSale(db, { cart, paymentMethod: 'tarjeta', receivedCents: 0, isVale: true });
+    const normal = await createSale(db, { cart, paymentMethod: 'tarjeta', receivedCents: 0 });
+    const v2 = await createSale(db, { cart, paymentMethod: 'tarjeta', receivedCents: 0, isVale: true });
+    expect([v1.valeFolio, v2.valeFolio]).toEqual([1, 2]);
+    expect(normal.valeFolio).toBeUndefined();
+    expect([v1.folio, normal.folio, v2.folio]).toEqual([1, 2, 3]);
+  });
+
+  it('cancelar exige motivo y decisión explícita sobre el dinero', async () => {
+    const p = await firstProduct();
+    const vale = await createSale(db, {
+      cart: addLine([], p, kg(1)), paymentMethod: 'efectivo', receivedCents: 3000, isVale: true,
+    });
+    await expect(cancelVale(db, vale.id, ' ', 'efectivo')).rejects.toThrow('motivo');
+    await expect(cancelVale(db, vale.id, 'x', undefined as never)).rejects.toThrow('dinero');
+    expect(await listPendingVales(db)).toHaveLength(1); // nada cambió
+  });
+
+  it('cancelar con devolución en efectivo resta de la caja una sola vez', async () => {
+    const p = await firstProduct();
+    const shift = await openShift(db, 10000);
+    const vale = await createSale(db, {
+      cart: addLine([], p, kg(2)), paymentMethod: 'efectivo', receivedCents: 6000, isVale: true,
+    });
+    const c = await cancelVale(db, vale.id, 'ya no lo quiso', 'efectivo');
+    expect(c.refundCents).toBe(6000);
+    const moves = await listCashMovements(db, shift.id);
+    expect(moves.map((m) => [m.type, m.amountCents])).toEqual([['devolucion', 6000]]);
+    const r = buildShiftReport(shift, await listSalesByShift(db, shift.id), moves);
+    expect(r.byMethod.efectivo).toBe(6000); // el cobro sigue en su turno
+    expect(r.refundsCents).toBe(6000);
+    expect(r.expectedCashCents).toBe(10000); // fondo: el dinero entró y salió
+    expect(r.valesCount).toBe(0);
+  });
+
+  it('cancelar sin devolución o por transferencia NO toca el efectivo de caja', async () => {
+    const p = await firstProduct();
+    const shift = await openShift(db, 0);
+    const cart = addLine([], p, kg(1));
+    const a = await createSale(db, { cart, paymentMethod: 'efectivo', receivedCents: 3000, isVale: true });
+    const b = await createSale(db, { cart, paymentMethod: 'efectivo', receivedCents: 3000, isVale: true });
+    await cancelVale(db, a.id, 'sin devolver', 'ninguna');
+    await cancelVale(db, b.id, 'devuelto por transferencia', 'transferencia');
+    expect(await listCashMovements(db, shift.id)).toHaveLength(0);
+    const r = buildShiftReport(shift, await listSalesByShift(db, shift.id), []);
+    expect(r.expectedCashCents).toBe(6000);
+    const cancelled = await listVales(db, 'cancelado');
+    expect(cancelled.map((v) => [v.refundMethod, v.refundCents]).sort()).toEqual([
+      ['ninguna', 0],
+      ['transferencia', 3000],
+    ]);
+  });
+
+  it('un vale se puede cancelar aunque su turno ya esté cerrado; la devolución cae en el turno actual', async () => {
+    const p = await firstProduct();
+    await openShift(db, 0);
+    const vale = await createSale(db, {
+      cart: addLine([], p, kg(1)), paymentMethod: 'efectivo', receivedCents: 3000, isVale: true,
+    });
+    await closeShift(db, 3000);
+    const s2 = await openShift(db, 500);
+    await cancelVale(db, vale.id, 'cancelado al día siguiente', 'efectivo');
+    const moves = await listCashMovements(db, s2.id);
+    expect(moves).toHaveLength(1);
+    const r = buildShiftReport(s2, await listSalesByShift(db, s2.id), moves);
+    expect(r.expectedCashCents).toBe(500 - 3000);
+  });
+
+  it('no se puede cancelar un vale entregado, ni anular un vale como venta normal', async () => {
+    const p = await firstProduct();
+    const vale = await createSale(db, {
+      cart: addLine([], p, kg(1)), paymentMethod: 'tarjeta', receivedCents: 0, isVale: true,
+    });
+    await expect(voidSale(db, vale.id, 'x')).rejects.toThrow('pestaña Vales');
+    await deliverVale(db, vale.id);
+    await expect(cancelVale(db, vale.id, 'x', 'ninguna')).rejects.toThrow('ya fue entregado');
+    await expect(deliverVale(db, vale.id)).rejects.toThrow('ya fue entregado');
+  });
+});
+
+describe('calidades', () => {
+  it('la misma variedad con calidades distintas tiene precio e inventario propios', async () => {
+    const all = (await seedIfEmpty(db), await listProducts(db));
+    const persa = all.filter((p) => p.name === 'Limón persa');
+    expect(persa.map((p) => p.quality)).toEqual(['Primera', 'Segunda']);
+    await setPrice(db, persa[1].id, 2200);
+    await addStockMove(db, persa[0].id, 'entrada', kg(10));
+    const [a, b] = await Promise.all(persa.map((p) => getProduct(db, p.id)));
+    expect([a!.priceCents, b!.priceCents]).toEqual([3000, 2200]);
+    expect([a!.physicalMilli, b!.physicalMilli]).toEqual([kg(10), 0]);
+  });
+
+  it('el nombre vendido incluye la calidad y no se permiten duplicados', async () => {
+    const p = await firstProduct();
+    const sale = await createSale(db, { cart: addLine([], p, kg(1)), paymentMethod: 'tarjeta', receivedCents: 0 });
+    expect(sale.items[0].name).toBe('Limón persa · Primera');
+    await expect(
+      saveProduct(db, { name: 'Limón persa', quality: 'Primera', unit: 'kg', priceCents: 100, active: true }),
+    ).rejects.toThrow('Ya existe');
+    const ok = await saveProduct(db, { name: 'Limón persa', quality: 'Calibre 5', unit: 'kg', priceCents: 4000, active: true });
+    expect(ok.quality).toBe('Calibre 5');
   });
 });
 
@@ -277,6 +388,10 @@ describe('respaldo', () => {
     expect((await getCurrentShift(other))?.openingCashCents).toBe(10000);
     const next = await createSale(other, { cart: addLine([], p, kg(1)), paymentMethod: 'tarjeta', receivedCents: 0 });
     expect(next.folio).toBe(3);
+    const v = await createSale(other, {
+      cart: addLine([], p, kg(1)), paymentMethod: 'tarjeta', receivedCents: 0, isVale: true,
+    });
+    expect(v.valeFolio).toBe(2); // continúa tras el vale V-1 del respaldo
     other.close();
   });
 

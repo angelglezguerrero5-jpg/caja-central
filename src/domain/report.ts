@@ -20,7 +20,9 @@ export interface ShiftReport {
   valesCents: number;
   /** Salidas de efectivo (gastos, retiros). */
   cashOutCents: number;
-  /** Fondo + ventas en efectivo − salidas (el cambio ya está descontado). */
+  /** Devoluciones en efectivo por vales cancelados. */
+  refundsCents: number;
+  /** Fondo + ventas en efectivo − salidas − devoluciones (el cambio ya está descontado). */
   expectedCashCents: number;
 }
 
@@ -44,7 +46,9 @@ export function buildShiftReport(
     }
     count++;
     total += s.totalCents;
-    if (s.delivery !== 'inmediata') {
+    // Un vale cancelado ya no es vale vigente, pero su cobro sigue en el turno donde
+    // ocurrió; la devolución (si la hubo) es un movimiento aparte.
+    if (s.delivery === 'pendiente' || s.delivery === 'entregado') {
       valesCount++;
       valesCents += s.totalCents;
     }
@@ -66,7 +70,11 @@ export function buildShiftReport(
 
   // El cobro de un vale ya está en su venta; entregarlo NO es dinero nuevo.
   let cashOut = 0;
-  for (const m of movements) if (m.type === 'salida') cashOut += m.amountCents;
+  let refunds = 0;
+  for (const m of movements) {
+    if (m.type === 'salida') cashOut += m.amountCents;
+    else if (m.type === 'devolucion') refunds += m.amountCents;
+  }
 
   return {
     salesCount: count,
@@ -78,7 +86,8 @@ export function buildShiftReport(
     valesCount,
     valesCents,
     cashOutCents: cashOut,
-    expectedCashCents: shift.openingCashCents + byMethod.efectivo - cashOut,
+    refundsCents: refunds,
+    expectedCashCents: shift.openingCashCents + byMethod.efectivo - cashOut - refunds,
   };
 }
 

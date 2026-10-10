@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
 import { addStockMove, availableMilli, listProducts, saveProduct } from '../db/repo';
+import { productLabel } from '../domain/cart';
 import { formatMoney, formatQty, parseMoney, parseQty } from '../domain/money';
 import type { Product, Unit } from '../domain/types';
 import { errMsg, useApp } from './ctx';
@@ -18,6 +19,7 @@ export function Inventario() {
   const [qtyText, setQtyText] = useState('');
   const [note, setNote] = useState('');
   const [newName, setNewName] = useState('');
+  const [newQuality, setNewQuality] = useState('');
   const [newPrice, setNewPrice] = useState('');
   const [newUnit, setNewUnit] = useState<Unit>('kg');
 
@@ -45,8 +47,9 @@ export function Inventario() {
     const price = parseMoney(newPrice);
     if (!price) return toast('Precio inválido', 'error');
     try {
-      await saveProduct(db, { name: newName, unit: newUnit, priceCents: price, active: true });
+      await saveProduct(db, { name: newName, quality: newQuality, unit: newUnit, priceCents: price, active: true });
       setNewName('');
+      setNewQuality('');
       setNewPrice('');
       toast('Variedad agregada');
       bump();
@@ -70,7 +73,7 @@ export function Inventario() {
       {products.map((p) => (
         <article class={p.active ? 'card' : 'card inactive'} key={p.id} data-testid="inv-row">
           <header>
-            <strong>{p.name}</strong>
+            <strong>{productLabel(p)}</strong>
             <span>
               {formatMoney(p.priceCents)}/{p.unit}
             </span>
@@ -133,6 +136,14 @@ export function Inventario() {
             data-testid="new-name"
             value={newName}
             onInput={(e) => setNewName((e.target as HTMLInputElement).value)}
+          />
+        </label>
+        <label class="field">
+          <span>Calidad / tamaño / calibre (opcional)</span>
+          <input
+            data-testid="new-quality"
+            value={newQuality}
+            onInput={(e) => setNewQuality((e.target as HTMLInputElement).value)}
           />
         </label>
         <label class="field">

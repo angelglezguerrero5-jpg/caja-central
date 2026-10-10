@@ -11,6 +11,8 @@ export type Unit = 'kg' | 'pieza' | 'caja' | 'arpilla';
 export interface Product {
   id: string;
   name: string;
+  /** Calidad/tamaño/calibre opcional (ej. "Primera", "Calibre 5"). Cada combinación tiene su propio precio e inventario. */
+  quality?: string;
   unit: Unit;
   priceCents: number;
   active: boolean;
@@ -39,8 +41,12 @@ export type PaymentMethod = 'efectivo' | 'transferencia' | 'tarjeta';
  *  - inmediata: venta normal, sale de bodega al cobrar.
  *  - pendiente: VALE pagado; la mercancía queda reservada hasta entregarla.
  *  - entregado: vale ya entregado.
+ *  - cancelado: vale cancelado antes de entregarse (el dinero se maneja aparte).
  */
-export type DeliveryStatus = 'inmediata' | 'pendiente' | 'entregado';
+export type DeliveryStatus = 'inmediata' | 'pendiente' | 'entregado' | 'cancelado';
+
+/** Cómo se devolvió el dinero al cancelar un vale. Nunca se asume. */
+export type RefundMethod = 'efectivo' | 'transferencia' | 'ninguna';
 
 export type SaleStatus = 'completada' | 'anulada';
 
@@ -58,9 +64,15 @@ export interface Sale {
   changeCents: number;
   status: SaleStatus;
   delivery: DeliveryStatus;
+  /** Folio propio del vale (distinto del folio de venta). */
+  valeFolio?: number;
   /** Nombre/nota del cliente (opcional, útil en vales). */
   customerName?: string;
   deliveredAt?: string;
+  cancelReason?: string;
+  cancelledAt?: string;
+  refundMethod?: RefundMethod;
+  refundCents?: number;
   voidReason?: string;
   voidedAt?: string;
 }
@@ -76,7 +88,7 @@ export interface Shift {
 }
 
 /** Movimiento de efectivo fuera de una venta, dentro de un turno. */
-export type CashMovementType = 'salida';
+export type CashMovementType = 'salida' | 'devolucion';
 
 export interface CashMovement {
   id: string;
@@ -129,4 +141,5 @@ export interface Backup {
   cashMovements: CashMovement[];
   stockMoves: StockMove[];
   nextFolio: number;
+  nextValeFolio: number;
 }
