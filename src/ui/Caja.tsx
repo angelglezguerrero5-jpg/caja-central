@@ -1,0 +1,289 @@
+import { useEffect, useRef, useState } from 'preact/hooks';
+import {
+  availableMilli,
+  createSale,
+  DuplicateSaleError,
+  listProducts,
+  newId,
+  setPrice,
+} from '../db/repo';
+import { formatMoney, formatQty, lineTotalCents, parseMoney, parseQty } from '../domain/money';
+import { checkPayment } from '../domain/cart';
+import type { PaymentMethod, Product, Sale } from '../domain/types';
+import { errMsg, useApp } from './ctx';
+
+const BILLS = [20, 50, 100, 200, 500, 1000];
+const METHODS: Array<[PaymentMethod, string]> = [
+  ['efectivo', 'Efectivo'],
+  ['transferencia', 'Transferencia'],
+  ['tarjeta', 'Tarjeta'],
+];
+const LS_VARIETY = 'limones.variety';
+
+function lsGet(k: string): string | null {
+  try {
+    return localStorage.getItem(k);
+  } catch {
+    return null;
+  }
+}
+function lsSet(k: string, v: string) {
+  try {
+    localStorage.setItem(k, v);
+  } catch {
+    /* sin almacenamiento local: solo se pierde la preferencia */
+  }
+}
+
+const centsToText = (c: number) => (c % 100 === 0 ? String(c / 100) : (c / 100).toFixed(2));
+
+export function Caja() {
+  const { db, version, bump, toast } = useApp();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [selectedId, setSelectedId] = useState(lsGet(LS_VARIETY) ?? '');
+  const [kgText, setKgText] = useState('');
+  const [priceText, setPriceText] = useState('');
+  const [method, setMethod] = useState<PaymentMethod>('efectivo');
+  const [cashText, setCashText] = useState('');
+  const [isVale, setIsVale] = useState(false);
+  const [customer, setCustomer] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [last, setLast] = useState<Sale | null>(null);
+  const kgRef = useRef<HTMLInputElement>(null);
+  // Un id por intento de venta: si se reintenta (doble toque) no se duplica.
+  const attemptId = useRef(newId());
+
+  useEffect(() => {
+    listProducts(db).then((all) => setProducts(all.filter((p) => p.active)));
+  }, [db, version]);
+
+  const selected = products.find((p) => p.id === selectedId) ?? products[0];
+
+  // Al cambiar de variedad (o al cargar) se muestra su precio guardado.
+  useEffect(() => {
+    if (selected) setPriceText(centsToText(selected.priceCents));
+  }, [selected?.id, selected?.priceCents]);
+
+  const qty = parseQty(kgText);
+  const price = parseMoney(priceText);
+  const unitLabel = selected?.unit === 'kg' ? 'kg' : (selected?.unit ?? 'kg');
+  const total = qty && price ? lineTotalCents(price, qty) : 0;
+  const received = method === 'efectivo' ? (parseMoney(cashText) ?? 0) : total;
+  const pay = checkPayment(total, method, received);
+  const canConfirm = !saving && !!selected && !!qty && !!price && pay.ok;
+
+  function selectVariety(p: Product) {
+    setSelectedId(p.id);
+    lsSet(LS_VARIETY, p.id);
+    kgRef.current?.focus();
+  }
+
+  async function commitPrice() {
+    if (!selected || price === null || price <= 0 || price === selected.priceCents) return;
+    try {
+      await setPrice(db, selected.id, price);
+      bump();
+      toast(`Precio de ${selected.name}: ${formatMoney(price)}`);
+    } catch (e) {
+      toast(errMsg(e), 'error');
+    }
+  }
+
+  function addBill(b: number) {
+    const cur = parseMoney(cashText) ?? 0;
+    setCashText(centsToText(cur + b * 100));
+  }
+
+  async function confirm() {
+    if (!canConfirm || !selected || !qty || !price) return;
+    setSaving(true);
+    try {
+      if (price !== selected.priceCents) await setPrice(db, selected.id, price);
+      let sale: Sale | undefined;
+      try {
+        sale = await createSale(db, {
+          id: attemptId.current,
+          cart: [
+            {
+              productId: selected.id,
+              name: selected.name,
+              unit: selected.unit,
+              qtyMilli: qty,
+              unitPriceCents: price,
+            },
+          ],
+          paymentMethod: method,
+          receivedCents: received,
+          isVale,
+          customerName: customer,
+        });
+      } catch (e) {
+        if (e instanceof DuplicateSaleError) sale = e.sale; // ya estaba guardada
+        else throw e;
+      }
+      setLast(sale);
+      attemptId.current = newId();
+      // Limpia kilos y efectivo; conserva variedad, precio, método y vale.
+      setKgText('');
+      setCashText('');
+      setCustomer('');
+      setIsVale(false);
+      bump();
+      toast(`Venta #${sale.folio} guardada`);
+      kgRef.current?.focus();
+    } catch (e) {
+      toast(errMsg(e), 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (products.length === 0) {
+    return <p class="empty">No hay variedades activas. Agrégalas en Inventario.</p>;
+  }
+
+  return (
+    <section class="caja" data-testid="caja">
+      <div class="chips" role="radiogroup" aria-label="Variedad">
+        {products.map((p) => (
+          <button
+            key={p.id}
+            role="radio"
+            aria-checked={p.id === selected?.id}
+            class={p.id === selected?.id ? 'chip active' : 'chip'}
+            data-testid="variety"
+            onClick={() => selectVariety(p)}
+          >
+            {p.name}
+          </button>
+        ))}
+      </div>
+
+      <div class="row2">
+        <label class="field">
+          <span>Kilos</span>
+          <input
+            ref={kgRef}
+            data-testid="kg"
+            inputMode="decimal"
+            autoComplete="off"
+            autoFocus
+            placeholder="0"
+            value={kgText}
+            onInput={(e) => setKgText((e.target as HTMLInputElement).value)}
+            onKeyDown={(e) => e.key === 'Enter' && confirm()}
+          />
+        </label>
+        <label class="field">
+          <span>Precio por {unitLabel}</span>
+          <input
+            data-testid="price"
+            inputMode="decimal"
+            autoComplete="off"
+            value={priceText}
+            onInput={(e) => setPriceText((e.target as HTMLInputElement).value)}
+            onBlur={commitPrice}
+          />
+        </label>
+      </div>
+      {selected && (
+        <p class="hint" data-testid="stock-hint">
+          Disponible: {formatQty(availableMilli(selected), selected.unit)}
+          {selected.reservedMilli > 0 && ` · Reservado: ${formatQty(selected.reservedMilli, selected.unit)}`}
+          {availableMilli(selected) < 0 && ' ⚠ revisa inventario'}
+        </p>
+      )}
+
+      <div class="total" data-testid="total">
+        <span>Total</span>
+        <strong>{formatMoney(total)}</strong>
+      </div>
+
+      <div class="chips" role="radiogroup" aria-label="Forma de pago">
+        {METHODS.map(([m, label]) => (
+          <button
+            key={m}
+            role="radio"
+            aria-checked={method === m}
+            class={method === m ? 'chip active' : 'chip'}
+            data-testid={`method-${m}`}
+            onClick={() => setMethod(m)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {method === 'efectivo' && (
+        <>
+          <label class="field">
+            <span>Efectivo recibido</span>
+            <input
+              data-testid="cash"
+              inputMode="decimal"
+              autoComplete="off"
+              placeholder="0"
+              value={cashText}
+              onInput={(e) => setCashText((e.target as HTMLInputElement).value)}
+              onKeyDown={(e) => e.key === 'Enter' && confirm()}
+            />
+          </label>
+          <div class="bills">
+            {BILLS.map((b) => (
+              <button key={b} class="bill" data-testid={`bill-${b}`} onClick={() => addBill(b)}>
+                ${b}
+              </button>
+            ))}
+            <button
+              class="bill exact"
+              data-testid="exact"
+              disabled={total <= 0}
+              onClick={() => setCashText(centsToText(total))}
+            >
+              Exacto
+            </button>
+            <button class="bill clear" data-testid="clear-cash" onClick={() => setCashText('')}>
+              Borrar
+            </button>
+          </div>
+          <div class="change" data-testid="change">
+            <span>Cambio</span>
+            <strong>{pay.ok ? formatMoney(pay.changeCents) : '—'}</strong>
+          </div>
+        </>
+      )}
+
+      <label class="check">
+        <input
+          type="checkbox"
+          data-testid="is-vale"
+          checked={isVale}
+          onChange={(e) => setIsVale((e.target as HTMLInputElement).checked)}
+        />
+        Vale: pagado, se entrega después (reserva mercancía)
+      </label>
+      {isVale && (
+        <label class="field">
+          <span>Cliente (opcional)</span>
+          <input
+            data-testid="customer"
+            value={customer}
+            onInput={(e) => setCustomer((e.target as HTMLInputElement).value)}
+          />
+        </label>
+      )}
+
+      <button class="confirm" data-testid="confirm" disabled={!canConfirm} onClick={confirm}>
+        {saving ? 'Guardando…' : isVale ? 'Cobrar y generar vale' : 'Confirmar venta'}
+      </button>
+
+      {last && (
+        <p class="last" data-testid="last-sale">
+          Última: #{last.folio} · {formatMoney(last.totalCents)}
+          {last.changeCents > 0 && ` · cambio ${formatMoney(last.changeCents)}`}
+          {last.delivery === 'pendiente' && ' · VALE pendiente de entrega'}
+        </p>
+      )}
+    </section>
+  );
+}
