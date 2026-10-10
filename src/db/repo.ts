@@ -1,4 +1,4 @@
-import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
+import { openDB, type DBSchema, type IDBPDatabase, type IDBPTransaction } from 'idb';
 import { checkPayment, toSaleItems } from '../domain/cart';
 import { buildShiftReport, localDay } from '../domain/report';
 import type {
@@ -33,7 +33,46 @@ interface LimonesDB extends DBSchema {
 export type DB = IDBPDatabase<LimonesDB>;
 
 export const DB_NAME = 'venta-limones';
-const DB_VERSION = 1;
+export const DB_VERSION = 1;
+
+// Las migraciones trabajan con el API crudo de idb (sin el esquema tipado): tocan versiones viejas.
+export type Migration = (db: IDBPDatabase<unknown>, tx: IDBPTransaction<unknown, string[], 'versionchange'>) => void;
+
+/**
+ * Migraciones por versión. Reglas: nunca borrar stores ni datos; solo crear lo que falte
+ * (idempotente) y rellenar campos nuevos. Cada versión nueva agrega una entrada aquí
+ * y sube DB_VERSION. IndexedDB ejecuta el upgrade en una transacción: si falla, se
+ * revierte completo y la base queda en la versión anterior con sus datos intactos.
+ */
+export const MIGRATIONS: Record<number, Migration> = {
+  1: (db) => {
+    const make = (name: string, opts: IDBObjectStoreParameters) =>
+      db.objectStoreNames.contains(name) ? undefined : db.createObjectStore(name, opts);
+    make('products', { keyPath: 'id' });
+    const sales = make('sales', { keyPath: 'id' });
+    if (sales) {
+      sales.createIndex('byDay', 'day');
+      sales.createIndex('byShift', 'shiftId');
+      sales.createIndex('byFolio', 'folio', { unique: true });
+      sales.createIndex('byDelivery', 'delivery');
+    }
+    const shifts = make('shifts', { keyPath: 'id' });
+    shifts?.createIndex('byOpenedAt', 'openedAt');
+    const cash = make('cashMovements', { keyPath: 'id' });
+    cash?.createIndex('byShift', 'shiftId');
+    const stock = make('stockMoves', { keyPath: 'id' });
+    stock?.createIndex('byProduct', 'productId');
+    make('meta', { keyPath: 'key' });
+  },
+};
+
+export interface OpenOptions {
+  /** Solo para pruebas: simula versiones futuras del esquema. */
+  version?: number;
+  migrations?: Record<number, Migration>;
+  /** Se llama si otra pestaña pide actualizar el esquema y esta debe cerrarse. */
+  onBlocking?: () => void;
+}
 
 // Los helpers internos reciben transacciones con distintos conjuntos de
 // stores; se tipan de forma laxa para no pelear con los genéricos de idb.
@@ -56,24 +95,23 @@ export function newId(): string {
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
 }
 
-export function openDatabase(name = DB_NAME): Promise<DB> {
-  return openDB<LimonesDB>(name, DB_VERSION, {
-    upgrade(db) {
-      db.createObjectStore('products', { keyPath: 'id' });
-      const sales = db.createObjectStore('sales', { keyPath: 'id' });
-      sales.createIndex('byDay', 'day');
-      sales.createIndex('byShift', 'shiftId');
-      sales.createIndex('byFolio', 'folio', { unique: true });
-      sales.createIndex('byDelivery', 'delivery');
-      const shifts = db.createObjectStore('shifts', { keyPath: 'id' });
-      shifts.createIndex('byOpenedAt', 'openedAt');
-      const cash = db.createObjectStore('cashMovements', { keyPath: 'id' });
-      cash.createIndex('byShift', 'shiftId');
-      const stock = db.createObjectStore('stockMoves', { keyPath: 'id' });
-      stock.createIndex('byProduct', 'productId');
-      db.createObjectStore('meta', { keyPath: 'key' });
+export function openDatabase(name = DB_NAME, opts: OpenOptions = {}): Promise<DB> {
+  const version = opts.version ?? DB_VERSION;
+  const migrations = { ...MIGRATIONS, ...opts.migrations };
+  let ref: DB | undefined;
+  return openDB<LimonesDB>(name, version, {
+    upgrade(db, oldVersion, _newVersion, tx) {
+      tx.done.catch(() => undefined); // si una migración falla, el error llega por openDB
+      for (let v = oldVersion + 1; v <= version; v++) {
+        migrations[v]?.(db as unknown as IDBPDatabase<unknown>, tx as never);
+      }
     },
-  });
+    // Otra pestaña con una versión nueva espera: se cierra esta conexión para no bloquearla.
+    blocking() {
+      ref?.close();
+      opts.onBlocking?.();
+    },
+  }).then((db) => (ref = db));
 }
 
 const now = () => new Date().toISOString();

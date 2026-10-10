@@ -231,3 +231,28 @@ test('vale entregado no puede canjearse otra vez', async ({ page }) => {
   await page.getByTestId('vales-pendiente').click();
   await expect(page.getByTestId('vale')).toHaveCount(0);
 });
+
+test('historial: consulta ventas por día con su estado; auditoría de integridad sin problemas', async ({ page }) => {
+  await openApp(page);
+  await addStock(page, 0, '50');
+  await tab(page, 'caja');
+  await sellCash(page, '2', [100]);
+  await page.getByTestId('kg').fill('5');
+  await page.getByTestId('exact').click();
+  await page.getByTestId('is-vale').check();
+  await charge(page);
+
+  await tab(page, 'mas');
+  await expect(page.getByTestId('hist-row')).toHaveCount(2);
+  await expect(page.getByTestId('hist-summary')).toContainText('2 ventas · $210.00');
+  await expect(page.getByTestId('hist-row').first()).toContainText('VALE V-1 · PENDIENTE');
+  await expect(page.getByTestId('hist-row').nth(1)).toContainText('Entregada');
+
+  await page.getByTestId('hist-day').fill('2020-01-01');
+  await expect(page.getByTestId('hist-row')).toHaveCount(0);
+  await expect(page.getByTestId('hist-summary')).toContainText('0 ventas');
+
+  await page.getByTestId('audit').click();
+  await expect(page.getByTestId('audit-result')).toContainText('Sin inconsistencias');
+  await expect(page.getByTestId('storage-state')).toContainText('Almacenamiento');
+});

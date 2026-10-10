@@ -94,10 +94,11 @@ export function Corte() {
       <p class="hint">Turno abierto {new Date(shift.openedAt).toLocaleString('es-MX')}</p>
       <dl class="report">
         <div><dt>Ventas ({report.salesCount})</dt><dd data-testid="r-total">{formatMoney(report.totalCents)}</dd></div>
+        <div><dt>Entregadas al momento ({report.immediateCount})</dt><dd>{formatMoney(report.immediateCents)}</dd></div>
+        <div><dt>Vales pagados ({report.valesCount})</dt><dd>{formatMoney(report.valesCents)}</dd></div>
         <div><dt>Efectivo</dt><dd data-testid="r-efectivo">{formatMoney(report.byMethod.efectivo)}</dd></div>
         <div><dt>Transferencia</dt><dd>{formatMoney(report.byMethod.transferencia)}</dd></div>
         <div><dt>Tarjeta</dt><dd>{formatMoney(report.byMethod.tarjeta)}</dd></div>
-        <div><dt>Vales vendidos ({report.valesCount})</dt><dd>{formatMoney(report.valesCents)}</dd></div>
         <div><dt>Fondo inicial</dt><dd>{formatMoney(report.openingCashCents)}</dd></div>
         <div><dt>Salidas de efectivo</dt><dd>−{formatMoney(report.cashOutCents)}</dd></div>
         <div><dt>Devoluciones de vales</dt><dd data-testid="r-refunds">−{formatMoney(report.refundsCents)}</dd></div>

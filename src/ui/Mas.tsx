@@ -1,10 +1,22 @@
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
+import { auditDatabase, type AuditResult } from '../db/audit';
 import { exportBackup, importBackup, validateBackup } from '../db/repo';
 import { errMsg, useApp } from './ctx';
+import { Historial } from './Historial';
 
 export function Mas() {
   const { db, bump, toast } = useApp();
   const [busy, setBusy] = useState(false);
+  const [audit, setAudit] = useState<AuditResult | null>(null);
+  const [persisted, setPersisted] = useState<boolean | null>(null);
+  const [quota, setQuota] = useState('');
+
+  useEffect(() => {
+    navigator.storage?.persisted?.().then(setPersisted).catch(() => setPersisted(null));
+    navigator.storage?.estimate?.().then((e) => {
+      if (e.usage !== undefined && e.quota) setQuota(`${(e.usage / 1024).toFixed(0)} KB de ${(e.quota / 1048576).toFixed(0)} MB`);
+    }).catch(() => undefined);
+  }, []);
 
   async function download() {
     try {
@@ -46,6 +58,7 @@ export function Mas() {
 
   return (
     <section data-testid="mas">
+      <Historial />
       <h2>Respaldo</h2>
       <p class="hint">Los datos viven solo en este teléfono. Exporta un respaldo seguido y guárdalo fuera del equipo.</p>
       <button class="primary" data-testid="export" onClick={download}>
@@ -64,6 +77,32 @@ export function Mas() {
           }}
         />
       </label>
+      <h2>Estado de los datos</h2>
+      <p class="hint" data-testid="storage-state">
+        Almacenamiento:{' '}
+        {persisted === null ? 'no se pudo consultar' : persisted ? 'persistente (Android no lo borrará solo)' : 'NO persistente: puede ser borrado si falta espacio'}
+        {quota && ` · en uso ${quota}`}
+      </p>
+      <button
+        data-testid="audit"
+        onClick={async () => {
+          try {
+            setAudit(await auditDatabase(db));
+          } catch (e) {
+            toast(errMsg(e), 'error');
+          }
+        }}
+      >
+        Auditar integridad
+      </button>
+      {audit && (
+        <div data-testid="audit-result" class={audit.ok ? 'ok' : 'warn'}>
+          {audit.ok
+            ? `✔ Sin inconsistencias (${audit.stats.sales} ventas, ${audit.stats.vales} vales, ${audit.stats.stockMoves} movimientos)`
+            : `✖ ${audit.issues.length} problema(s):`}
+          {!audit.ok && <ul>{audit.issues.map((i) => <li key={i}>{i}</li>)}</ul>}
+        </div>
+      )}
       <p class="hint">Versión 0.1.0 · MVP</p>
     </section>
   );

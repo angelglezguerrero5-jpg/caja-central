@@ -19,5 +19,12 @@ export function useApp(): AppCtx {
 }
 
 export function errMsg(e: unknown): string {
+  const name = (e as { name?: string } | null)?.name;
+  if (name === 'QuotaExceededError') {
+    return 'Almacenamiento lleno: la venta NO se guardó. Exporta un respaldo y libera espacio.';
+  }
+  if (name === 'InvalidStateError' || name === 'UnknownError') {
+    return 'No se pudo escribir en la base de datos del teléfono. Cierra y vuelve a abrir la app.';
+  }
   return e instanceof Error ? e.message : String(e);
 }

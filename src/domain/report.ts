@@ -15,6 +15,9 @@ export interface ShiftReport {
   byMethod: Record<PaymentMethod, number>;
   byProduct: ProductSummary[];
   openingCashCents: number;
+  /** Ventas entregadas al momento (no vales): ya están dentro de los totales. */
+  immediateCount: number;
+  immediateCents: number;
   /** Vales vendidos (pagados) en este turno: ya están dentro de los totales. */
   valesCount: number;
   valesCents: number;
@@ -35,6 +38,8 @@ export function buildShiftReport(
   const products = new Map<string, ProductSummary>();
   let total = 0;
   let count = 0;
+  let immediateCount = 0;
+  let immediateCents = 0;
   let valesCount = 0;
   let valesCents = 0;
   let voided = 0;
@@ -48,6 +53,10 @@ export function buildShiftReport(
     total += s.totalCents;
     // Un vale cancelado ya no es vale vigente, pero su cobro sigue en el turno donde
     // ocurrió; la devolución (si la hubo) es un movimiento aparte.
+    if (s.delivery === 'inmediata') {
+      immediateCount++;
+      immediateCents += s.totalCents;
+    }
     if (s.delivery === 'pendiente' || s.delivery === 'entregado') {
       valesCount++;
       valesCents += s.totalCents;
@@ -83,6 +92,8 @@ export function buildShiftReport(
     byMethod,
     byProduct: [...products.values()].sort((a, b) => b.totalCents - a.totalCents),
     openingCashCents: shift.openingCashCents,
+    immediateCount,
+    immediateCents,
     valesCount,
     valesCents,
     cashOutCents: cashOut,

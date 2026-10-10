@@ -24,6 +24,10 @@ export function App() {
   const [toast, setToast] = useState<{ msg: string; kind: 'ok' | 'error' } | null>(null);
   const [online, setOnline] = useState(navigator.onLine);
 
+  const showToast = useCallback((msg: string, kind: 'ok' | 'error' = 'ok') => {
+    setToast({ msg, kind });
+    window.setTimeout(() => setToast((t) => (t?.msg === msg ? null : t)), kind === 'error' ? 5000 : 2200);
+  }, []);
   useEffect(() => {
     openDatabase()
       .then(async (d) => {
@@ -31,20 +35,20 @@ export function App() {
         setDb(d);
       })
       .catch((e) => setFatal(errMsg(e)));
+    // Cualquier fallo no previsto (p. ej. de almacenamiento) se muestra, nunca se pierde en silencio.
+    const onRejection = (ev: PromiseRejectionEvent) => showToast(`Error inesperado: ${errMsg(ev.reason)}`, 'error');
+    window.addEventListener('unhandledrejection', onRejection);
     const on = () => setOnline(true);
     const off = () => setOnline(false);
     window.addEventListener('online', on);
     window.addEventListener('offline', off);
     return () => {
+      window.removeEventListener('unhandledrejection', onRejection);
       window.removeEventListener('online', on);
       window.removeEventListener('offline', off);
     };
   }, []);
 
-  const showToast = useCallback((msg: string, kind: 'ok' | 'error' = 'ok') => {
-    setToast({ msg, kind });
-    window.setTimeout(() => setToast((t) => (t?.msg === msg ? null : t)), kind === 'error' ? 5000 : 2200);
-  }, []);
   const bump = useCallback(() => setVersion((v) => v + 1), []);
 
   if (fatal) {
