@@ -323,3 +323,25 @@ test('respaldo con registros dañados se rechaza y NO borra las ventas existente
   await tab(page, 'caja');
   await expect(page.getByTestId('variety').first()).toBeVisible(); // variedades intactas
 });
+
+test('doble pulsación en "Registrar salida" y en "Guardar entrada" no registra dos veces', async ({ page }) => {
+  await openApp(page);
+  await tab(page, 'corte');
+  await page.getByTestId('opening').fill('100');
+  await page.getByTestId('open-shift').click();
+  await expect(page.getByTestId('r-expected')).toContainText('$100.00');
+
+  await page.getByTestId('out-amount').fill('10');
+  await page.getByTestId('out-concept').fill('bolsas');
+  await page.getByTestId('out-save').dblclick();
+  await expect(page.getByTestId('toast')).toContainText('Salida registrada');
+  await expect(page.getByTestId('r-expected')).toContainText('$90.00'); // una sola salida de $10
+
+  await tab(page, 'inventario');
+  const row = page.getByTestId('inv-row').first();
+  await row.getByTestId('move-entrada').click();
+  await row.getByTestId('move-qty').fill('10');
+  await row.getByTestId('move-save').dblclick();
+  await expect(page.getByTestId('toast')).toContainText('Entrada registrada');
+  await expect(row.getByTestId('stock-physical')).toHaveText('10 kg'); // no 20
+});

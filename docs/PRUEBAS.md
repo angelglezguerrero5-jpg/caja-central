@@ -11,7 +11,7 @@ salida completa del comando, no de resúmenes de RTK.
 | Vitest (unitarias/integración con `fake-indexeddb`) | **48 de 48** pasan, 0 errores sin capturar (domain 11 · repo 31 · integrity 6) |
 | `vite build` | OK (precache de 8 archivos) |
 | `verify:pwa` | manifest, 3 íconos y precache consistentes |
-| Playwright E2E (Chromium, perfil Pixel 7) | **25 de 25** pasan |
+| Playwright E2E (Chromium, perfil Pixel 7) | **26 de 26** pasan |
 
 La prueba aleatoria (400 operaciones con semilla fija: ventas, vales, entregas, cancelaciones, anulaciones,
 entradas, mermas, ajustes, cierres de turno) audita el inventario y el dinero cada 50 operaciones.
@@ -68,7 +68,16 @@ cancelación de vales con/sin devolución, historial, auditoría, migraciones (v
    revierte ante CUALQUIER excepción (ahora usado por todas las escrituras multi-paso) y (b) validación estricta de
    la forma de cada registro antes de tocar nada. Comprobado también "al revés": la misma secuencia sin `runRw`
    deja la primera escritura confirmada. Regresión cubierta por 4 pruebas unitarias y 1 E2E.
-5. **Bug real encontrado por E2E:** `formatQty` mostraba "-2000 g" en vez de "-2 kg". Corregido, con prueba unitaria.
+5. **Doble pulsación duplicaba una entrada de inventario** (reproducido: 20 kg en vez de 10 kg). Corregido con una
+   guarda de reentrada en Inventario y en las acciones del Corte; cubierto por E2E.
+6. **Bug real encontrado por E2E:** `formatQty` mostraba "-2000 g" en vez de "-2 kg". Corregido, con prueba unitaria.
+
+## Revisión independiente
+
+Se lanzaron dos subagentes revisores; ambos fueron **interrumpidos por la sesión** (`[Request interrupted by user]`)
+antes de entregar un informe, así que **no hay hallazgos suyos**. La revisión se completó de forma directa sobre las
+rutas críticas (`createSale`, restauración, vales, service worker, botones no idempotentes) y produjo los incidentes 4 y 5.
+No sustituye una revisión humana independiente antes de operar con dinero real.
 
 ## No probado / no verificable aquí
 

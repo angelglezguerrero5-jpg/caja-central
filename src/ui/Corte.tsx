@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import {
   addCashOut,
   closeShift,
@@ -46,13 +46,19 @@ export function Corte() {
     })();
   }, [db, version]);
 
+  // Una acción a la vez: un doble toque no repite salidas, cierres ni anulaciones.
+  const busy = useRef(false);
   const run = async (fn: () => Promise<unknown>, ok: string) => {
+    if (busy.current) return;
+    busy.current = true;
     try {
       await fn();
       toast(ok);
       bump();
     } catch (e) {
       toast(errMsg(e), 'error');
+    } finally {
+      busy.current = false;
     }
   };
 

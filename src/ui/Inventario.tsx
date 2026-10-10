@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { addStockMove, availableMilli, listProducts, listStockMoves, saveProduct } from '../db/repo';
 import { productLabel } from '../domain/cart';
 import { formatMoney, formatQty, parseQty } from '../domain/money';
@@ -19,6 +19,8 @@ export function Inventario() {
   const [moving, setMoving] = useState<{ p: Product; kind: MoveKind } | null>(null);
   const [qtyText, setQtyText] = useState('');
   const [note, setNote] = useState('');
+  // Guarda contra doble pulsación: el estado de React llega tarde, la referencia es inmediata.
+  const submitting = useRef(false);
   const [history, setHistory] = useState<{ id: string; moves: StockMove[] } | null>(null);
 
   useEffect(() => {
@@ -26,9 +28,10 @@ export function Inventario() {
   }, [db, version]);
 
   async function submitMove() {
-    if (!moving) return;
+    if (!moving || submitting.current) return;
     const q = parseQty(qtyText) ?? (moving.kind === 'ajuste' && qtyText.trim() === '0' ? 0 : null);
     if (q === null) return toast('Cantidad inválida', 'error');
+    submitting.current = true;
     try {
       try {
         await addStockMove(db, moving.p.id, moving.kind, q, note);
@@ -46,6 +49,8 @@ export function Inventario() {
       bump();
     } catch (e) {
       toast(errMsg(e), 'error');
+    } finally {
+      submitting.current = false;
     }
   }
 
