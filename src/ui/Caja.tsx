@@ -12,6 +12,7 @@ import { formatMoney, formatQty, lineTotalCents, parseMoney, parseQty } from '..
 import { checkPayment, productLabel } from '../domain/cart';
 import type { PaymentMethod, Product, Sale } from '../domain/types';
 import { errMsg, useApp } from './ctx';
+import { NuevaVariedad } from './NuevaVariedad';
 
 const BILLS = [20, 50, 100, 200, 500, 1000];
 const METHODS: Array<[PaymentMethod, string]> = [
@@ -163,7 +164,18 @@ export function Caja({ active = true }: { active?: boolean }) {
   }
 
   if (products.length === 0) {
-    return <p class="empty">No hay variedades activas. Agrégalas en Inventario.</p>;
+    return (
+      <section class="caja" data-testid="caja">
+        <div data-testid="caja-vacia">
+          <h2>Primero configura tus variedades</h2>
+          <p class="hint">
+            La app no trae variedades ni precios de ejemplo: escribe los tuyos. Después registra tu existencia inicial en
+            Inventario → Entrada (mientras no lo hagas, cada venta pedirá autorización por existencia insuficiente).
+          </p>
+          <NuevaVariedad />
+        </div>
+      </section>
+    );
   }
 
   return (

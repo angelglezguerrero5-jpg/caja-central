@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'preact/hooks';
-import { openDatabase, seedIfEmpty, type DB } from '../db/repo';
+import { openDatabase, type DB } from '../db/repo';
 import { Ctx, errMsg } from './ctx';
 import { Caja } from './Caja';
 import { Vales } from './Vales';
@@ -30,10 +30,7 @@ export function App() {
   }, []);
   useEffect(() => {
     openDatabase()
-      .then(async (d) => {
-        await seedIfEmpty(d);
-        setDb(d);
-      })
+      .then((d) => setDb(d))
       .catch((e) => setFatal(errMsg(e)));
     // Cualquier fallo no previsto (p. ej. de almacenamiento) se muestra, nunca se pierde en silencio.
     const onRejection = (ev: PromiseRejectionEvent) => showToast(`Error inesperado: ${errMsg(ev.reason)}`, 'error');

@@ -193,7 +193,10 @@ export const DEFAULT_PRODUCTS: Array<Pick<Product, 'name' | 'quality' | 'unit' |
   { name: 'Limón con semilla', unit: 'kg', priceCents: 3500 },
 ];
 
-/** Inserta variedades de ejemplo solo si la base está vacía. */
+/**
+ * SOLO PRUEBAS/DEMOSTRACIÓN: inserta variedades con precios de ejemplo si la base está vacía.
+ * La aplicación NO la llama: no debe inventar variedades, precios ni inventario del negocio.
+ */
 export async function seedIfEmpty(db: DB): Promise<boolean> {
   return runRw(db, ['products'], async (tx) => {
     const store = tx.objectStore('products');

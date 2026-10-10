@@ -25,6 +25,13 @@ Todo se guarda en IndexedDB del propio teléfono; no hay servidor ni cuentas.
 Dinero en centavos enteros y cantidades en milésimas: sin errores de flotante.
 Efectivo esperado = fondo + ventas en efectivo − salidas − devoluciones en efectivo.
 
+## Primer uso (la app NO trae datos de ejemplo)
+
+1. Abre la app: la caja pide dar de alta tus variedades con **tus** precios reales (y calidad/calibre si aplica).
+2. Registra tu existencia inicial en *Inventario → Entrada*. Mientras no lo hagas, cada venta pedirá
+   autorización por existencia insuficiente (la app no inventa inventario).
+3. Opcional: *Corte → abrir turno* con el fondo inicial (también se puede corregir después).
+
 ## Comandos
 
 ```bash

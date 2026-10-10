@@ -1,7 +1,33 @@
 import { expect, type Page } from '@playwright/test';
 
-/** Abre la app, espera a que el service worker controle la página. */
-export async function openApp(page: Page) {
+/** Variedades de prueba. La app NO trae ninguna: cada prueba las da de alta por la interfaz. */
+export const TEST_VARIETIES = [
+  { name: 'Limón persa', quality: 'Primera', price: '30' },
+  { name: 'Limón persa', quality: 'Segunda', price: '20' },
+  { name: 'Limón con semilla', quality: '', price: '35' },
+];
+
+async function addVariety(page: Page, v: { name: string; quality: string; price: string }) {
+  const form = page.locator('[data-testid="new-variety"]:visible');
+  await form.getByTestId('new-name').fill(v.name);
+  await form.getByTestId('new-quality').fill(v.quality);
+  await form.getByTestId('new-price').fill(v.price);
+  await form.getByTestId('add-product').click();
+  await expect(page.getByTestId('toast')).toContainText('Variedad agregada');
+}
+
+/** Primera variedad desde el estado vacío de la caja; el resto desde Inventario. */
+export async function seedVarieties(page: Page) {
+  await expect(page.getByTestId('caja-vacia')).toBeVisible();
+  await addVariety(page, TEST_VARIETIES[0]);
+  await page.getByTestId('tab-inventario').click();
+  for (const v of TEST_VARIETIES.slice(1)) await addVariety(page, v);
+  await page.getByTestId('tab-caja').click();
+  await expect(page.getByTestId('kg')).toBeVisible();
+}
+
+/** Abre la app, espera a que el service worker controle la página y (por defecto) da de alta las variedades de prueba. */
+export async function openApp(page: Page, opts: { seed?: boolean } = {}) {
   await page.goto('/');
   await expect(page.getByTestId('caja')).toBeVisible();
   await page.evaluate(async () => {
@@ -10,6 +36,7 @@ export async function openApp(page: Page) {
       await new Promise<void>((r) => navigator.serviceWorker.addEventListener('controllerchange', () => r(), { once: true }));
     }
   });
+  if (opts.seed ?? true) await seedVarieties(page);
 }
 
 export const tab = (page: Page, name: 'caja' | 'vales' | 'inventario' | 'corte' | 'mas') =>

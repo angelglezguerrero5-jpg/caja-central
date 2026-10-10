@@ -11,7 +11,7 @@ salida completa del comando, no de resúmenes de RTK.
 | Vitest (unitarias/integración con `fake-indexeddb`) | **48 de 48** pasan, 0 errores sin capturar (domain 11 · repo 31 · integrity 6) |
 | `vite build` | OK (precache de 8 archivos) |
 | `verify:pwa` | manifest, 3 íconos y precache consistentes |
-| Playwright E2E (Chromium, perfil Pixel 7) | **24 de 24** pasan |
+| Playwright E2E (Chromium, perfil Pixel 7) | **25 de 25** pasan |
 
 La prueba aleatoria (400 operaciones con semilla fija: ventas, vales, entregas, cancelaciones, anulaciones,
 entradas, mermas, ajustes, cierres de turno) audita el inventario y el dinero cada 50 operaciones.
@@ -36,7 +36,7 @@ entradas, mermas, ajustes, cierres de turno) audita el inventario y el dinero ca
 | 14 | Exportar y restaurar respaldo | E2E `respaldo…` (en un contexto limpio) ; unit |
 | 15 | Funciona sin conexión tras precarga | E2E `modo avión…` (**simulado**, ver abajo) |
 
-Además: fondo inicial corregible, aviso de turno que sigue abierto al día siguiente (reloj simulado),
+Además: primer arranque sin datos inventados (la app no trae variedades, precios ni inventario), fondo inicial corregible, aviso de turno que sigue abierto al día siguiente (reloj simulado),
 caja que conserva kilos/efectivo al cambiar de pestaña, confirmación explícita, calidades, existencias negativas con autorización, mermas con motivo,
 cancelación de vales con/sin devolución, historial, auditoría, migraciones (v1→v3 y reversión si una migración falla).
 

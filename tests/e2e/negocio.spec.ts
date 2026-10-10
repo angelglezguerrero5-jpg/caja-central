@@ -86,7 +86,7 @@ test('respaldo: exportar, borrar datos y restaurar recupera ventas y folio', asy
   const ctx = await browser.newContext({ serviceWorkers: 'allow' });
   const p2 = await ctx.newPage();
   p2.on('dialog', (d) => d.accept());
-  await openApp(p2);
+  await openApp(p2, { seed: false }); // dispositivo nuevo: sin variedades, todo viene del respaldo
   await tab(p2, 'mas');
   await p2.getByTestId('import-file').setInputFiles(path);
   await expect(p2.getByTestId('toast')).toContainText('restaurado');

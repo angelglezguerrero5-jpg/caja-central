@@ -109,3 +109,24 @@ test('pago con transferencia no pide efectivo', async ({ page }) => {
   await expect(page.getByTestId('r-total')).toContainText('$90.00');
   await expect(page.getByTestId('r-efectivo')).toContainText('$0.00');
 });
+
+test('primer arranque: la app no inventa variedades ni precios; se configura desde la caja', async ({ page }) => {
+  await openApp(page, { seed: false });
+  await expect(page.getByTestId('caja-vacia')).toBeVisible();
+  await expect(page.getByTestId('variety')).toHaveCount(0);
+  await expect(page.getByTestId('kg')).toHaveCount(0);
+
+  // Sin precio no se puede dar de alta
+  await page.getByTestId('new-name').fill('Limón persa');
+  await page.getByTestId('add-product').click();
+  await expect(page.getByTestId('toast')).toContainText('precio');
+  await expect(page.getByTestId('caja-vacia')).toBeVisible();
+
+  await page.getByTestId('new-price').fill('27.5');
+  await page.getByTestId('add-product').click();
+  await expect(page.getByTestId('toast')).toContainText('Variedad agregada');
+  await expect(page.getByTestId('caja-vacia')).toHaveCount(0);
+  await expect(page.getByTestId('price')).toHaveValue('27.50'); // el precio que escribió el usuario, no uno inventado
+  await expect(page.getByTestId('variety')).toHaveCount(1);
+  await expect(page.getByTestId('stock-hint')).toContainText('Disponible: 0 g'); // sin inventario inventado
+});

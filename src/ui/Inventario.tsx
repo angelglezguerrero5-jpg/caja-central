@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'preact/hooks';
 import { addStockMove, availableMilli, listProducts, listStockMoves, saveProduct } from '../db/repo';
 import { productLabel } from '../domain/cart';
-import { formatMoney, formatQty, parseMoney, parseQty } from '../domain/money';
-import type { Product, StockMove, Unit } from '../domain/types';
+import { formatMoney, formatQty, parseQty } from '../domain/money';
+import type { Product, StockMove } from '../domain/types';
 import { errMsg, useApp } from './ctx';
+import { NuevaVariedad } from './NuevaVariedad';
 
 type MoveKind = 'entrada' | 'merma' | 'ajuste';
 const KIND_LABEL: Record<MoveKind, string> = {
@@ -19,10 +20,6 @@ export function Inventario() {
   const [qtyText, setQtyText] = useState('');
   const [note, setNote] = useState('');
   const [history, setHistory] = useState<{ id: string; moves: StockMove[] } | null>(null);
-  const [newName, setNewName] = useState('');
-  const [newQuality, setNewQuality] = useState('');
-  const [newPrice, setNewPrice] = useState('');
-  const [newUnit, setNewUnit] = useState<Unit>('kg');
 
   useEffect(() => {
     listProducts(db).then(setProducts);
@@ -46,21 +43,6 @@ export function Inventario() {
       setMoving(null);
       setQtyText('');
       setNote('');
-      bump();
-    } catch (e) {
-      toast(errMsg(e), 'error');
-    }
-  }
-
-  async function addProduct() {
-    const price = parseMoney(newPrice);
-    if (!price) return toast('Precio inválido', 'error');
-    try {
-      await saveProduct(db, { name: newName, quality: newQuality, unit: newUnit, priceCents: price, active: true });
-      setNewName('');
-      setNewQuality('');
-      setNewPrice('');
-      toast('Variedad agregada');
       bump();
     } catch (e) {
       toast(errMsg(e), 'error');
@@ -168,45 +150,7 @@ export function Inventario() {
       ))}
 
       <h3>Nueva variedad</h3>
-      <div class="inline-form">
-        <label class="field">
-          <span>Nombre</span>
-          <input
-            data-testid="new-name"
-            value={newName}
-            onInput={(e) => setNewName((e.target as HTMLInputElement).value)}
-          />
-        </label>
-        <label class="field">
-          <span>Calidad / tamaño / calibre (opcional)</span>
-          <input
-            data-testid="new-quality"
-            value={newQuality}
-            onInput={(e) => setNewQuality((e.target as HTMLInputElement).value)}
-          />
-        </label>
-        <label class="field">
-          <span>Precio por unidad</span>
-          <input
-            data-testid="new-price"
-            inputMode="decimal"
-            value={newPrice}
-            onInput={(e) => setNewPrice((e.target as HTMLInputElement).value)}
-          />
-        </label>
-        <label class="field">
-          <span>Unidad</span>
-          <select value={newUnit} onChange={(e) => setNewUnit((e.target as HTMLSelectElement).value as Unit)}>
-            <option value="kg">kg</option>
-            <option value="pieza">pieza</option>
-            <option value="caja">caja</option>
-            <option value="arpilla">arpilla</option>
-          </select>
-        </label>
-        <button class="primary" data-testid="add-product" onClick={addProduct}>
-          Agregar variedad
-        </button>
-      </div>
+      <NuevaVariedad />
     </section>
   );
 }
