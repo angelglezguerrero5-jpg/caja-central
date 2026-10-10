@@ -26,7 +26,10 @@ export async function sellCash(page: Page, kg: string, bills: number[]) {
 export async function charge(page: Page) {
   await page.getByTestId('confirm').click();
   await expect(page.getByTestId('confirm-sheet')).toBeVisible();
-  await page.getByTestId('confirm-yes').click();
+  // Sin inventario cargado la hoja pide autorización explícita en vez de "Confirmar".
+  const authorize = page.getByTestId('authorize');
+  if (await authorize.count()) await authorize.click();
+  else await page.getByTestId('confirm-yes').click();
   await expect(page.getByTestId('toast')).toContainText('guardada');
 }
 

@@ -49,7 +49,7 @@ export function qtyForAmount(amountCents: number, unitPriceCents: number): numbe
 
 export function formatQty(qtyMilli: number, unit: Unit): string {
   if (unit === 'kg') {
-    if (qtyMilli < 1000) return `${qtyMilli} g`;
+    if (Math.abs(qtyMilli) < 1000) return `${qtyMilli} g`;
     const kg = qtyMilli / 1000;
     return `${kg.toLocaleString('es-MX', { maximumFractionDigits: 3 })} kg`;
   }

@@ -7,7 +7,9 @@ import {
   availableMilli,
   cancelVale,
   closeShift,
-  createSale,
+  createSale as createSaleStrict,
+  InsufficientStockError,
+  type NewSaleInput,
   deliverVale,
   DuplicateSaleError,
   exportBackup,
@@ -36,6 +38,9 @@ import { buildShiftReport, localDay } from '../../src/domain/report';
 
 let db: DB;
 let name: string;
+
+/** Los tests de negocio no se ocupan del inventario inicial: autorizan existencia negativa. */
+const createSale = (d: DB, i: NewSaleInput) => createSaleStrict(d, { allowNegativeStock: true, ...i });
 
 beforeEach(async () => {
   name = `test-${newId()}`;
@@ -297,6 +302,60 @@ describe('vales (pagados, pendientes de entrega)', () => {
   });
 });
 
+describe('existencias disponibles', () => {
+  it('rechaza una venta que dejaría el disponible negativo, sin guardar nada ni gastar folio', async () => {
+    const p = await firstProduct();
+    await addStockMove(db, p.id, 'entrada', kg(5));
+    const cart = addLine([], p, kg(8));
+    const err = await createSaleStrict(db, { cart, paymentMethod: 'tarjeta', receivedCents: 0 }).catch((e) => e);
+    expect(err).toBeInstanceOf(InsufficientStockError);
+    expect(err.shortages[0]).toMatchObject({ availableMilli: kg(5), neededMilli: kg(8) });
+    expect(await listSalesByDay(db, localDay())).toHaveLength(0);
+    expect((await getProduct(db, p.id))!.physicalMilli).toBe(kg(5));
+    const ok = await createSaleStrict(db, { cart: addLine([], p, kg(5)), paymentMethod: 'tarjeta', receivedCents: 0 });
+    expect(ok.folio).toBe(1); // el rechazo no consumió folio
+    expect(ok.stockOverride).toBeUndefined();
+  });
+
+  it('con autorización explícita permite vender y deja constancia', async () => {
+    const p = await firstProduct();
+    const s = await createSaleStrict(db, {
+      cart: addLine([], p, kg(2)), paymentMethod: 'tarjeta', receivedCents: 0, allowNegativeStock: true,
+    });
+    expect(s.stockOverride).toBe(true);
+    expect((await getProduct(db, p.id))!.physicalMilli).toBe(-kg(2));
+  });
+
+  it('el disponible descuenta lo reservado: no se puede vender lo apartado por vales', async () => {
+    const p = await firstProduct();
+    await addStockMove(db, p.id, 'entrada', kg(10));
+    await createSaleStrict(db, {
+      cart: addLine([], p, kg(7)), paymentMethod: 'tarjeta', receivedCents: 0, isVale: true,
+    });
+    await expect(
+      createSaleStrict(db, { cart: addLine([], p, kg(4)), paymentMethod: 'tarjeta', receivedCents: 0 }),
+    ).rejects.toBeInstanceOf(InsufficientStockError);
+    await expect(
+      createSaleStrict(db, { cart: addLine([], p, kg(3)), paymentMethod: 'tarjeta', receivedCents: 0 }),
+    ).resolves.toBeTruthy();
+  });
+
+  it('mermas y ajustes exigen motivo y no dejan el disponible negativo sin autorización', async () => {
+    const p = await firstProduct();
+    await addStockMove(db, p.id, 'entrada', kg(10));
+    await createSaleStrict(db, {
+      cart: addLine([], p, kg(6)), paymentMethod: 'tarjeta', receivedCents: 0, isVale: true,
+    });
+    await expect(addStockMove(db, p.id, 'merma', kg(1), ' ')).rejects.toThrow('motivo');
+    await expect(addStockMove(db, p.id, 'ajuste', kg(10), '')).rejects.toThrow('motivo');
+    await expect(addStockMove(db, p.id, 'merma', kg(5), 'podrido')).rejects.toThrow('disponible negativo');
+    await expect(addStockMove(db, p.id, 'ajuste', kg(4), 'conteo')).rejects.toThrow('disponible negativo');
+    expect((await getProduct(db, p.id))!.physicalMilli).toBe(kg(10)); // nada cambió
+    const ok = await addStockMove(db, p.id, 'merma', kg(5), 'podrido', true);
+    expect(availableMilli(ok)).toBe(-kg(1));
+  });
+});
+
 describe('calidades', () => {
   it('la misma variedad con calidades distintas tiene precio e inventario propios', async () => {
     const all = (await seedIfEmpty(db), await listProducts(db));
@@ -328,7 +387,7 @@ describe('inventario', () => {
     await addStockMove(db, p.id, 'merma', kg(2), 'podrido');
     let cur = (await getProduct(db, p.id))!;
     expect(cur.physicalMilli).toBe(kg(48));
-    cur = await addStockMove(db, p.id, 'ajuste', kg(45));
+    cur = await addStockMove(db, p.id, 'ajuste', kg(45), 'conteo del cierre');
     expect(cur.physicalMilli).toBe(kg(45));
     const ajuste = (await listStockMoves(db, p.id)).find((m) => m.type === 'ajuste')!;
     expect(ajuste.deltaMilli).toBe(-kg(3));

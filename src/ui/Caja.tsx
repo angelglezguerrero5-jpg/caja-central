@@ -3,6 +3,7 @@ import {
   availableMilli,
   createSale,
   DuplicateSaleError,
+  InsufficientStockError,
   listProducts,
   newId,
   setPrice,
@@ -74,6 +75,7 @@ export function Caja() {
   const total = qty && price ? lineTotalCents(price, qty) : 0;
   const received = method === 'efectivo' ? (parseMoney(cashText) ?? 0) : total;
   const pay = checkPayment(total, method, received);
+  const short = !!selected && !!qty && availableMilli(selected) - qty < 0;
   const canConfirm = !saving && !!selected && !!qty && !!price && pay.ok;
 
   function selectVariety(p: Product) {
@@ -129,6 +131,7 @@ export function Caja() {
           receivedCents: received,
           isVale,
           customerName: customer,
+          allowNegativeStock: short, // solo si el cajero lo autorizó en la hoja de confirmación
         });
       } catch (e) {
         if (e instanceof DuplicateSaleError) sale = e.sale; // ya estaba guardada
@@ -147,6 +150,7 @@ export function Caja() {
       kgRef.current?.focus();
     } catch (e) {
       setConfirming(false);
+      if (e instanceof InsufficientStockError) bump(); // refresca existencias en pantalla
       toast(errMsg(e), 'error');
     } finally {
       setSaving(false);
@@ -322,13 +326,25 @@ export function Caja() {
                 <> · recibido {formatMoney(received)} · <strong data-testid="sheet-change">cambio {formatMoney(pay.changeCents)}</strong></>
               )}
             </p>
+            {short && selected && qty && (
+              <p class="warn" role="alert" data-testid="stock-warning">
+                ⚠ Disponible insuficiente: hay {formatQty(Math.max(availableMilli(selected), 0), selected.unit)} y vendes{' '}
+                {formatQty(qty, selected.unit)}. La existencia quedará en negativo; requiere tu autorización.
+              </p>
+            )}
             {isVale && <p class="hint">Se reservará la mercancía hasta entregarla{customer.trim() && ` · ${customer.trim()}`}.</p>}
             <div class="actions two">
               <button data-testid="confirm-no" onClick={cancelConfirm} disabled={saving}>
                 Volver
               </button>
-              <button class="primary" data-testid="confirm-yes" autoFocus onClick={confirm} disabled={saving}>
-                {saving ? 'Guardando…' : 'Confirmar'}
+              <button
+                class={short ? 'danger' : 'primary'}
+                data-testid={short ? 'authorize' : 'confirm-yes'}
+                autoFocus
+                onClick={confirm}
+                disabled={saving}
+              >
+                {saving ? 'Guardando…' : short ? 'Autorizar y cobrar' : 'Confirmar'}
               </button>
             </div>
           </div>

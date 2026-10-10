@@ -103,6 +103,25 @@ function assertPositiveInt(n: number, msg: string) {
   if (!Number.isSafeInteger(n) || n <= 0) throw new Error(msg);
 }
 
+export interface Shortage {
+  productId: string;
+  name: string;
+  availableMilli: number;
+  neededMilli: number;
+}
+
+/** Se lanza cuando la operación dejaría la existencia DISPONIBLE en negativo sin autorización. */
+export class InsufficientStockError extends Error {
+  constructor(public shortages: Shortage[]) {
+    super(
+      'Existencia disponible insuficiente: ' +
+        shortages
+          .map((s) => `${s.name} (disponible ${s.availableMilli / 1000}, se piden ${s.neededMilli / 1000})`)
+          .join('; '),
+    );
+  }
+}
+
 export function availableMilli(p: Product): number {
   return p.physicalMilli - p.reservedMilli;
 }
@@ -246,7 +265,10 @@ export async function addStockMove(
   type: 'entrada' | 'merma' | 'ajuste',
   qtyMilli: number,
   note = '',
+  allowNegative = false,
 ): Promise<Product> {
+  // Mermas y ajustes son correcciones: siempre llevan motivo.
+  if (type !== 'entrada' && !note.trim()) throw new Error('Indica el motivo del movimiento');
   if (type === 'ajuste') {
     if (!Number.isSafeInteger(qtyMilli) || qtyMilli < 0) throw new Error('Existencia inválida');
   } else {
@@ -257,6 +279,13 @@ export async function addStockMove(
   if (!p) throw abortWith(tx, 'Variedad no encontrada');
   const delta =
     type === 'entrada' ? qtyMilli : type === 'merma' ? -qtyMilli : qtyMilli - p.physicalMilli;
+  const availableAfter = p.physicalMilli + delta - p.reservedMilli;
+  if (delta < 0 && availableAfter < 0 && !allowNegative) {
+    throw abortWith(
+      tx,
+      `Quedaría disponible negativo (${availableAfter / 1000}): hay ${p.reservedMilli / 1000} reservados en vales. Se requiere autorización.`,
+    );
+  }
   const updated = await moveStock(tx, productId, type, delta, 0, note.trim(), now());
   await tx.done;
   return updated!;
@@ -388,6 +417,8 @@ export interface NewSaleInput {
   /** true → VALE: pagado ahora, mercancía reservada hasta su entrega. */
   isVale?: boolean;
   customerName?: string;
+  /** Autorización explícita para vender aunque el disponible quede negativo. */
+  allowNegativeStock?: boolean;
   at?: Date;
 }
 
@@ -420,6 +451,22 @@ export async function createSale(db: DB, input: NewSaleInput): Promise<Sale> {
     abortWith(tx, 'duplicada');
     throw new DuplicateSaleError(dup);
   }
+  const needed = new Map<string, { name: string; qty: number }>();
+  for (const it of items) {
+    const cur = needed.get(it.productId);
+    needed.set(it.productId, { name: it.name, qty: (cur?.qty ?? 0) + it.qtyMilli });
+  }
+  const shortages: Shortage[] = [];
+  for (const [productId, n] of needed) {
+    const p: Product | undefined = await tx.objectStore('products').get(productId);
+    if (p && availableMilli(p) - n.qty < 0) {
+      shortages.push({ productId, name: n.name, availableMilli: availableMilli(p), neededMilli: n.qty });
+    }
+  }
+  if (shortages.length > 0 && !input.allowNegativeStock) {
+    abortWith(tx, 'sin existencia');
+    throw new InsufficientStockError(shortages);
+  }
   const meta = tx.objectStore('meta');
   const shift = await ensureShift(tx, atIso);
   const folio: number = (await meta.get('nextFolio'))?.value ?? 1;
@@ -442,6 +489,7 @@ export async function createSale(db: DB, input: NewSaleInput): Promise<Sale> {
     status: 'completada',
     delivery: input.isVale ? 'pendiente' : 'inmediata',
     ...(valeFolio ? { valeFolio } : {}),
+    ...(shortages.length > 0 ? { stockOverride: true } : {}),
     ...(customerName ? { customerName } : {}),
   };
   await tx.objectStore('sales').add(sale);

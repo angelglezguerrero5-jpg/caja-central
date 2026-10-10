@@ -110,3 +110,124 @@ test('respaldo inválido no borra datos', async ({ page }) => {
   await tab(page, 'corte');
   await expect(page.getByTestId('sale-row')).toHaveCount(1);
 });
+
+test('existencias: sin disponible suficiente exige autorización explícita; con inventario no', async ({ page }) => {
+  await openApp(page);
+  await addStock(page, 0, '5');
+
+  // 3 kg con 5 disponibles: confirmación normal, sin advertencia
+  await page.getByTestId('tab-caja').click();
+  await page.getByTestId('kg').fill('3');
+  await page.getByTestId('exact').click();
+  await page.getByTestId('confirm').click();
+  await expect(page.getByTestId('stock-warning')).toHaveCount(0);
+  await page.getByTestId('confirm-yes').click();
+  await expect(page.getByTestId('toast')).toContainText('guardada');
+
+  // 4 kg con 2 disponibles: advertencia y botón de autorización; "Volver" no vende
+  await page.getByTestId('kg').fill('4');
+  await page.getByTestId('exact').click();
+  await page.getByTestId('confirm').click();
+  await expect(page.getByTestId('stock-warning')).toBeVisible();
+  await expect(page.getByTestId('confirm-yes')).toHaveCount(0);
+  await page.getByTestId('confirm-no').click();
+  await tab(page, 'inventario');
+  await expect(page.getByTestId('stock-available').first()).toHaveText('2 kg');
+
+  // Autorizar: vende y deja la existencia en negativo, visible
+  await tab(page, 'caja'); // al cambiar de pestaña la caja se reinicia
+  await page.getByTestId('kg').fill('4');
+  await page.getByTestId('exact').click();
+  await page.getByTestId('confirm').click();
+  await page.getByTestId('authorize').click();
+  await expect(page.getByTestId('toast')).toContainText('guardada');
+  await tab(page, 'inventario');
+  await expect(page.getByTestId('stock-available').first()).toHaveText('-2 kg');
+});
+
+test('inventario: mermas y ajustes exigen motivo y quedan en el historial de movimientos', async ({ page }) => {
+  await openApp(page);
+  await addStock(page, 0, '20');
+  const row = page.getByTestId('inv-row').first();
+  await row.getByTestId('move-merma').click();
+  await row.getByTestId('move-qty').fill('2');
+  await expect(row.getByTestId('move-save')).toBeDisabled(); // sin motivo
+  await row.getByTestId('move-note').fill('se echó a perder');
+  await row.getByTestId('move-save').click();
+  await expect(row.getByTestId('stock-physical')).toHaveText('18 kg');
+  await row.getByTestId('show-moves').click();
+  await expect(row.getByTestId('moves-list')).toContainText('merma');
+  await expect(row.getByTestId('moves-list')).toContainText('se echó a perder');
+  await expect(row.getByTestId('moves-list')).toContainText('entrada');
+});
+
+test('vale: cancelar exige motivo y decidir qué pasa con el dinero; devolución en efectivo sale de caja', async ({ page }) => {
+  await openApp(page);
+  await addStock(page, 0, '50');
+  await tab(page, 'caja');
+  await page.getByTestId('kg').fill('10');
+  await page.getByTestId('exact').click();
+  await page.getByTestId('is-vale').check();
+  await charge(page); // $300 cobrados
+
+  await tab(page, 'corte');
+  await expect(page.getByTestId('r-expected')).toContainText('$300.00');
+
+  await tab(page, 'vales');
+  await page.getByTestId('cancel-vale').click();
+  await expect(page.getByTestId('cancel-confirm')).toBeDisabled();
+  await page.getByTestId('cancel-reason').fill('cliente no vino');
+  await expect(page.getByTestId('cancel-confirm')).toBeDisabled(); // falta decidir el dinero
+  await page.getByTestId('refund-efectivo').check();
+  await page.getByTestId('cancel-confirm').click();
+  await expect(page.getByTestId('toast')).toContainText('cancelado');
+  await expect(page.getByTestId('vale')).toHaveCount(0);
+
+  await page.getByTestId('vales-cancelado').click();
+  await expect(page.getByTestId('cancel-info')).toContainText('cliente no vino');
+  await expect(page.getByTestId('cancel-info')).toContainText('EFECTIVO');
+  await expect(page.getByTestId('deliver')).toHaveCount(0);
+
+  await tab(page, 'inventario');
+  const row = page.getByTestId('inv-row').first();
+  await expect(row.getByTestId('stock-reserved')).toHaveText('0 g');
+  await expect(row.getByTestId('stock-physical')).toHaveText('50 kg');
+
+  await tab(page, 'corte');
+  await expect(page.getByTestId('r-refunds')).toContainText('$300.00');
+  await expect(page.getByTestId('r-expected')).toContainText('$0.00'); // entró y salió
+});
+
+test('vale: cancelar SIN devolver dinero no altera el efectivo esperado', async ({ page }) => {
+  await openApp(page);
+  await tab(page, 'caja');
+  await page.getByTestId('kg').fill('1');
+  await page.getByTestId('exact').click();
+  await page.getByTestId('is-vale').check();
+  await charge(page);
+  await tab(page, 'vales');
+  await page.getByTestId('cancel-vale').click();
+  await page.getByTestId('cancel-reason').fill('error');
+  await page.getByTestId('refund-ninguna').check();
+  await page.getByTestId('cancel-confirm').click();
+  await tab(page, 'corte');
+  await expect(page.getByTestId('r-refunds')).toContainText('$0.00');
+  await expect(page.getByTestId('r-expected')).toContainText('$30.00');
+});
+
+test('vale entregado no puede canjearse otra vez', async ({ page }) => {
+  await openApp(page);
+  await tab(page, 'caja');
+  await page.getByTestId('kg').fill('1');
+  await page.getByTestId('exact').click();
+  await page.getByTestId('is-vale').check();
+  await charge(page);
+  await tab(page, 'vales');
+  await page.getByTestId('deliver').click();
+  await page.getByTestId('vales-entregado').click();
+  await expect(page.getByTestId('vale')).toHaveCount(1);
+  await expect(page.getByTestId('deliver')).toHaveCount(0);
+  await expect(page.getByTestId('cancel-vale')).toHaveCount(0);
+  await page.getByTestId('vales-pendiente').click();
+  await expect(page.getByTestId('vale')).toHaveCount(0);
+});

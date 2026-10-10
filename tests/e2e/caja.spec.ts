@@ -23,7 +23,7 @@ test('caja: total, billetes, cambio, limpieza y foco tras confirmar', async ({ p
   await page.getByTestId('confirm').click();
   await expect(page.getByTestId('sheet-total')).toHaveText('$45.00');
   await expect(page.getByTestId('sheet-change')).toContainText('$100.00');
-  await page.getByTestId('confirm-yes').click();
+  await page.getByTestId('authorize').click(); // sin inventario cargado pide autorización
   await expect(page.getByTestId('toast')).toContainText('Venta #1 guardada');
   await expect(page.getByTestId('kg')).toHaveValue('');
   await expect(page.getByTestId('cash')).toHaveValue('');
@@ -93,7 +93,7 @@ test('doble toque en confirmar no duplica la venta', async ({ page }) => {
   await page.getByTestId('kg').fill('1');
   await page.getByTestId('exact').click();
   await page.getByTestId('confirm').click();
-  await page.getByTestId('confirm-yes').dblclick();
+  await page.getByTestId('authorize').or(page.getByTestId('confirm-yes')).dblclick();
   await expect(page.getByTestId('toast')).toContainText('guardada');
   await tab(page, 'corte');
   await expect(page.getByTestId('sale-row')).toHaveCount(1);

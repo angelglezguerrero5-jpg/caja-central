@@ -42,6 +42,9 @@ describe('money', () => {
     expect(formatQty(1500, 'kg')).toBe('1.5 kg');
     expect(formatQty(2000, 'caja')).toBe('2 caja');
     expect(formatQty(1000, 'pieza')).toBe('1 pza');
+    expect(formatQty(-2000, 'kg')).toBe('-2 kg');
+    expect(formatQty(-500, 'kg')).toBe('-500 g');
+    expect(formatQty(0, 'kg')).toBe('0 g');
   });
 });
 

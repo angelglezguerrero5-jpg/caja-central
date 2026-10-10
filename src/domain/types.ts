@@ -69,6 +69,8 @@ export interface Sale {
   /** Nombre/nota del cliente (opcional, útil en vales). */
   customerName?: string;
   deliveredAt?: string;
+  /** La venta se autorizó con existencia disponible insuficiente. */
+  stockOverride?: boolean;
   cancelReason?: string;
   cancelledAt?: string;
   refundMethod?: RefundMethod;
