@@ -130,7 +130,7 @@ describe('auditoría de integridad', () => {
     expect(auditData(c, shiftId).issues.join()).toContain('físico');
 
     c = clone();
-    c.products[0].reservedMilli = 0;
+    c.products.find((p) => p.id === a.id)!.reservedMilli = 0; // el producto del vale pendiente
     expect(auditData(c, shiftId).issues.join()).toContain('Reservado');
 
     c = clone();
