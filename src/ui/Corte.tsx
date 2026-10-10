@@ -7,10 +7,11 @@ import {
   listClosedShifts,
   listSalesByShift,
   openShift,
+  setOpeningCash,
   voidSale,
 } from '../db/repo';
 import { formatMoney, formatQty, parseMoney } from '../domain/money';
-import { buildShiftReport, type ShiftReport } from '../domain/report';
+import { buildShiftReport, localDay, type ShiftReport } from '../domain/report';
 import type { CashMovement, Sale, Shift } from '../domain/types';
 import { errMsg, useApp } from './ctx';
 
@@ -23,6 +24,7 @@ export function Corte() {
   const [closed, setClosed] = useState<Shift[]>([]);
   const [openingText, setOpeningText] = useState('');
   const [countedText, setCountedText] = useState('');
+  const [fundText, setFundText] = useState('');
   const [outAmount, setOutAmount] = useState('');
   const [outConcept, setOutConcept] = useState('');
 
@@ -92,6 +94,12 @@ export function Corte() {
     <section data-testid="corte">
       <h2>Corte de caja</h2>
       <p class="hint">Turno abierto {new Date(shift.openedAt).toLocaleString('es-MX')}</p>
+      {localDay(new Date(shift.openedAt)) !== localDay() && (
+        <p class="warn" role="alert" data-testid="old-shift">
+          ⚠ Este turno se abrió el {new Date(shift.openedAt).toLocaleDateString('es-MX')} y sigue abierto. Cuenta el
+          efectivo y ciérralo para que las ventas de hoy queden en un corte nuevo.
+        </p>
+      )}
       <dl class="report">
         <div><dt>Ventas ({report.salesCount})</dt><dd data-testid="r-total">{formatMoney(report.totalCents)}</dd></div>
         <div><dt>Entregadas al momento ({report.immediateCount})</dt><dd>{formatMoney(report.immediateCents)}</dd></div>
@@ -116,6 +124,28 @@ export function Corte() {
           </ul>
         </>
       )}
+
+      <h3>Fondo inicial</h3>
+      <div class="inline-form">
+        <input
+          placeholder={`Actual: ${formatMoney(shift.openingCashCents)}`}
+          data-testid="fund-input"
+          inputMode="decimal"
+          value={fundText}
+          onInput={(e) => setFundText((e.target as HTMLInputElement).value)}
+        />
+        <button
+          data-testid="fund-save"
+          onClick={() => {
+            const c = parseMoney(fundText);
+            if (c === null) return toast('Monto inválido', 'error');
+            run(() => setOpeningCash(db, shift.id, c), 'Fondo inicial corregido');
+            setFundText('');
+          }}
+        >
+          Corregir fondo inicial
+        </button>
+      </div>
 
       <h3>Salida de efectivo</h3>
       <div class="inline-form">

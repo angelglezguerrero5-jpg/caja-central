@@ -26,6 +26,7 @@ import {
   loadCartDraft,
   newId,
   openDatabase,
+  runRw,
   openShift,
   saveCartDraft,
   saveProduct,
@@ -458,8 +459,63 @@ describe('respaldo', () => {
     await firstProduct();
     await expect(importBackup(db, { app: 'otra' })).rejects.toThrow();
     await expect(importBackup(db, { ...(await exportBackup(db)), nextFolio: 0 })).rejects.toThrow();
-    const dupSales = { ...(await exportBackup(db)), nextFolio: 9, sales: [{ id: 'x', folio: 1 }, { id: 'x', folio: 2 }] };
-    await expect(importBackup(db, dupSales)).rejects.toThrow('duplicadas');
+    // Ventas reales pero con el mismo id → duplicadas
+    const p = (await listProducts(db))[0];
+    await createSale(db, { cart: addLine([], p, kg(1)), paymentMethod: 'tarjeta', receivedCents: 0 });
+    const base = await exportBackup(db);
+    const dup = structuredClone(base);
+    dup.sales.push({ ...dup.sales[0], folio: 99 });
+    dup.nextFolio = 100;
+    await expect(importBackup(db, dup)).rejects.toThrow('duplicadas');
     expect(await listProducts(db)).toHaveLength(3);
+  });
+
+  it('REGRESIÓN: un registro dañado NO borra los datos actuales (restauración atómica)', async () => {
+    const p = await firstProduct();
+    await createSale(db, { cart: addLine([], p, kg(1)), paymentMethod: 'tarjeta', receivedCents: 0 });
+    const antes = await exportBackup(db);
+    const mal = {
+      app: 'sistema-venta-limones', version: 1, exportedAt: '', nextFolio: 1, nextValeFolio: 1,
+      products: [{ name: 'sin id' }], sales: [], shifts: [], cashMovements: [], stockMoves: [],
+    };
+    await expect(importBackup(db, mal)).rejects.toThrow('Respaldo dañado');
+    const despues = await exportBackup(db);
+    expect(despues.products).toEqual(antes.products);
+    expect(despues.sales).toEqual(antes.sales);
+    expect(despues.nextFolio).toBe(antes.nextFolio);
+  });
+
+  it('REGRESIÓN: ventas con estructura rota se rechazan antes de importar', async () => {
+    const p = await firstProduct();
+    await createSale(db, { cart: addLine([], p, kg(1)), paymentMethod: 'tarjeta', receivedCents: 0 });
+    const base = await exportBackup(db);
+    const sinItems = structuredClone(base) as unknown as { sales: Array<Record<string, unknown>> };
+    delete sinItems.sales[0].items;
+    await expect(importBackup(db, sinItems)).rejects.toThrow('venta nº 1');
+    const cantidadNegativa = structuredClone(base);
+    cantidadNegativa.sales[0].items[0].qtyMilli = -5;
+    await expect(importBackup(db, cantidadNegativa)).rejects.toThrow('venta nº 1');
+    const unidadRara = structuredClone(base) as unknown as { products: Array<Record<string, unknown>> };
+    unidadRara.products[0].unit = 'tonelada';
+    await expect(importBackup(db, unidadRara)).rejects.toThrow('variedad nº 1');
+    expect((await exportBackup(db)).sales).toHaveLength(1); // seguimos con los datos originales
+  });
+
+  it('una excepción síncrona de IndexedDB a mitad de una transacción revierte TODO', async () => {
+    const p = await firstProduct();
+    const before = (await getProduct(db, p.id))!;
+    // Primera escritura válida; la segunda lanza DataError (clave inexistente) SIN abortar sola.
+    await expect(
+      runRw(db, ['products'], async (tx) => {
+        await tx.objectStore('products').put({ ...before, name: 'MODIFICADO' });
+        await tx.objectStore('products').put({ name: 'sin id' });
+      }),
+    ).rejects.toMatchObject({ name: 'DataError' });
+    expect((await getProduct(db, p.id))!.name).toBe(before.name); // la primera escritura se revirtió
+    // Y la base sigue usable
+    const ok = await createSaleStrict(db, {
+      cart: addLine([], p, kg(1)), paymentMethod: 'tarjeta', receivedCents: 0, allowNegativeStock: true,
+    });
+    expect(ok.folio).toBe(1);
   });
 });

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'preact/hooks';
-import { auditDatabase, type AuditResult } from '../db/audit';
+import { auditData, auditDatabase, type AuditResult } from '../db/audit';
 import { exportBackup, importBackup, validateBackup } from '../db/repo';
 import { errMsg, useApp } from './ctx';
 import { Historial } from './Historial';
@@ -42,8 +42,12 @@ export function Mas() {
     try {
       const data = JSON.parse(await file.text());
       const b = validateBackup(data); // valida antes de pedir confirmación
+      const open = b.shifts.find((s) => !s.closedAt);
+      const found = auditData(b, open?.id).issues;
       const ok = window.confirm(
-        `Esto REEMPLAZARÁ todos los datos actuales por el respaldo (${b.sales.length} ventas, ${b.products.length} variedades). ¿Continuar?`,
+        `Esto REEMPLAZARÁ todos los datos actuales por el respaldo (${b.sales.length} ventas, ${b.products.length} variedades).` +
+          (found.length ? `\n\n⚠ El respaldo tiene ${found.length} inconsistencia(s) internas (por ejemplo: ${found[0]}).` : '') +
+          '\n\n¿Continuar?',
       );
       if (!ok) return;
       await importBackup(db, b);

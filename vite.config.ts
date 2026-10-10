@@ -30,7 +30,9 @@ const CACHE = 'limones-${hash}';
 const PRECACHE = ${JSON.stringify(urls, null, 2)};
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting()));
+  // cache:'reload' evita copiar al precache una versión vieja guardada en la caché HTTP del navegador.
+  const reqs = PRECACHE.map((u) => new Request(u, { cache: 'reload' }));
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(reqs)).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (e) => {

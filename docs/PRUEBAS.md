@@ -8,10 +8,10 @@ salida completa del comando, no de resúmenes de RTK.
 | Paso | Resultado |
 |---|---|
 | `tsc --noEmit` | sin errores |
-| Vitest (unitarias/integración con `fake-indexeddb`) | **45 de 45** pasan, 0 errores sin capturar (domain 11 · repo 28 · integrity 6) |
+| Vitest (unitarias/integración con `fake-indexeddb`) | **48 de 48** pasan, 0 errores sin capturar (domain 11 · repo 31 · integrity 6) |
 | `vite build` | OK (precache de 8 archivos) |
 | `verify:pwa` | manifest, 3 íconos y precache consistentes |
-| Playwright E2E (Chromium, perfil Pixel 7) | **20 de 20** pasan |
+| Playwright E2E (Chromium, perfil Pixel 7) | **24 de 24** pasan |
 
 La prueba aleatoria (400 operaciones con semilla fija: ventas, vales, entregas, cancelaciones, anulaciones,
 entradas, mermas, ajustes, cierres de turno) audita el inventario y el dinero cada 50 operaciones.
@@ -36,7 +36,8 @@ entradas, mermas, ajustes, cierres de turno) audita el inventario y el dinero ca
 | 14 | Exportar y restaurar respaldo | E2E `respaldo…` (en un contexto limpio) ; unit |
 | 15 | Funciona sin conexión tras precarga | E2E `modo avión…` (**simulado**, ver abajo) |
 
-Además: confirmación explícita, calidades, existencias negativas con autorización, mermas con motivo,
+Además: fondo inicial corregible, aviso de turno que sigue abierto al día siguiente (reloj simulado),
+caja que conserva kilos/efectivo al cambiar de pestaña, confirmación explícita, calidades, existencias negativas con autorización, mermas con motivo,
 cancelación de vales con/sin devolución, historial, auditoría, migraciones (v1→v3 y reversión si una migración falla).
 
 ## Offline: simulado vs. real (son cosas distintas)
@@ -60,7 +61,14 @@ cancelación de vales con/sin devolución, historial, auditoría, migraciones (v
    el archivo se reescribió y compila.
 3. **Prueba intermitente de auditoría** (pasó una vez, falló la siguiente): la prueba tomaba `products[0]` y
    `getAll` ordena por UUID aleatorio. Corregida seleccionando por id; 8 corridas consecutivas estables.
-4. **Bug real encontrado por E2E:** `formatQty` mostraba "-2000 g" en vez de "-2 kg". Corregido, con prueba unitaria.
+4. **Pérdida de datos al restaurar un respaldo dañado (encontrado en revisión propia, reproducido y corregido).**
+   Un respaldo con un registro sin `id` pasaba la validación superficial; `importBackup` borraba todas las tablas y
+   luego `put()` lanzaba `DataError`, que en IndexedDB **no aborta** la transacción: se confirmaba vacía.
+   Reproducción real: antes del intento 3 variedades y 1 venta, después 0 y 0. Corrección: (a) `runRw`, que aborta y
+   revierte ante CUALQUIER excepción (ahora usado por todas las escrituras multi-paso) y (b) validación estricta de
+   la forma de cada registro antes de tocar nada. Comprobado también "al revés": la misma secuencia sin `runRw`
+   deja la primera escritura confirmada. Regresión cubierta por 4 pruebas unitarias y 1 E2E.
+5. **Bug real encontrado por E2E:** `formatQty` mostraba "-2000 g" en vez de "-2 kg". Corregido, con prueba unitaria.
 
 ## No probado / no verificable aquí
 

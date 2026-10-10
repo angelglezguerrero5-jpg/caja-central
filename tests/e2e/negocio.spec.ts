@@ -256,3 +256,70 @@ test('historial: consulta ventas por día con su estado; auditoría de integrida
   await expect(page.getByTestId('audit-result')).toContainText('Sin inconsistencias');
   await expect(page.getByTestId('storage-state')).toContainText('Almacenamiento');
 });
+
+test('fondo inicial: si la primera venta abrió el turno en $0 se puede corregir después', async ({ page }) => {
+  await openApp(page);
+  await sellCash(page, '1', [50]); // el turno se abre solo con fondo $0
+  await tab(page, 'corte');
+  await expect(page.getByTestId('r-expected')).toContainText('$30.00');
+  await page.getByTestId('fund-input').fill('200');
+  await page.getByTestId('fund-save').click();
+  await expect(page.getByTestId('toast')).toContainText('Fondo inicial corregido');
+  await expect(page.getByTestId('r-expected')).toContainText('$230.00');
+  await page.getByTestId('fund-input').fill('abc');
+  await page.getByTestId('fund-save').click();
+  await expect(page.getByTestId('toast')).toContainText('Monto inválido');
+  await expect(page.getByTestId('r-expected')).toContainText('$230.00');
+});
+
+test('turno que sigue abierto al día siguiente avisa; el historial separa por día', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-10-09T12:00:00'));
+  await openApp(page);
+  await sellCash(page, '1', [50]);
+  await tab(page, 'corte');
+  await expect(page.getByTestId('old-shift')).toHaveCount(0); // mismo día: sin aviso
+
+  await page.clock.setFixedTime(new Date('2026-10-10T09:00:00'));
+  await page.reload();
+  await tab(page, 'corte');
+  await expect(page.getByTestId('old-shift')).toBeVisible();
+  await expect(page.getByTestId('old-shift')).toContainText('sigue abierto');
+
+  await tab(page, 'mas');
+  await expect(page.getByTestId('hist-day')).toHaveValue('2026-10-10');
+  await expect(page.getByTestId('hist-row')).toHaveCount(0);
+  await page.getByTestId('hist-day').fill('2026-10-09');
+  await expect(page.getByTestId('hist-row')).toHaveCount(1);
+  await expect(page.getByTestId('hist-summary')).toContainText('1 ventas · $30.00');
+});
+
+test('caja conserva kilos y efectivo al revisar otra pestaña y vuelve el foco a kilos', async ({ page }) => {
+  await openApp(page);
+  await page.getByTestId('kg').fill('2.5');
+  await page.getByTestId('bill-100').click();
+  await tab(page, 'inventario');
+  await tab(page, 'caja');
+  await expect(page.getByTestId('kg')).toHaveValue('2.5');
+  await expect(page.getByTestId('cash')).toHaveValue('100');
+  await expect(page.getByTestId('kg')).toBeFocused();
+  await expect(page.getByTestId('total')).toContainText('$75.00');
+});
+
+test('respaldo con registros dañados se rechaza y NO borra las ventas existentes', async ({ page }) => {
+  page.on('dialog', (d) => d.accept());
+  await openApp(page);
+  await sellCash(page, '1', [50]);
+  const evil = {
+    app: 'sistema-venta-limones', version: 1, exportedAt: '', nextFolio: 1, nextValeFolio: 1,
+    products: [{ name: 'sin id' }], sales: [], shifts: [], cashMovements: [], stockMoves: [],
+  };
+  await tab(page, 'mas');
+  await page.getByTestId('import-file').setInputFiles({
+    name: 'danado.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(evil)),
+  });
+  await expect(page.getByTestId('toast')).toContainText('Respaldo dañado');
+  await tab(page, 'corte');
+  await expect(page.getByTestId('sale-row')).toHaveCount(1);
+  await tab(page, 'caja');
+  await expect(page.getByTestId('variety').first()).toBeVisible(); // variedades intactas
+});

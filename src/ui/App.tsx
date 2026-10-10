@@ -71,7 +71,9 @@ export function App() {
         </span>
       </header>
       <main>
-        {tab === 'caja' && <Caja />}
+        <div hidden={tab !== 'caja'}>
+          <Caja active={tab === 'caja'} />
+        </div>
         {tab === 'vales' && <Vales />}
         {tab === 'inventario' && <Inventario />}
         {tab === 'corte' && <Corte />}

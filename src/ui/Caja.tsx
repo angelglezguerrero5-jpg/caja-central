@@ -38,7 +38,7 @@ function lsSet(k: string, v: string) {
 
 const centsToText = (c: number) => (c % 100 === 0 ? String(c / 100) : (c / 100).toFixed(2));
 
-export function Caja() {
+export function Caja({ active = true }: { active?: boolean }) {
   const { db, version, bump, toast } = useApp();
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedId, setSelectedId] = useState(lsGet(LS_VARIETY) ?? '');
@@ -58,6 +58,11 @@ export function Caja() {
   useEffect(() => {
     listProducts(db).then((all) => setProducts(all.filter((p) => p.active)));
   }, [db, version]);
+
+  // Al volver a la pestaña de caja, el foco regresa a kilos.
+  useEffect(() => {
+    if (active) kgRef.current?.focus();
+  }, [active]);
 
   const selected = products.find((p) => p.id === selectedId) ?? products[0];
   // Variedades (nombres distintos) y, dentro de la elegida, sus calidades.
