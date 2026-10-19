@@ -41,16 +41,57 @@ Ventaja: no necesitas computadora para volver a instalar o actualizar.
 ## Actualizar la app
 
 Cada `npm run build` genera un service worker con versión nueva. El teléfono lo descarga cuando hay
-conexión al servidor; la versión nueva se activa al **cerrar y volver a abrir** la app. Los datos no se
-tocan (las migraciones de IndexedDB nunca borran).
+conexión al servidor (al abrir la app, al volver a ella y cuando regresa el internet). Con la app abierta aparece
+«Hay una versión nueva de la app. Tus datos no se tocan.»: **Actualizar ahora** recarga; **Después** la deja como está
+(no se recarga sola para no perder una captura a medias). Los datos no se tocan (las migraciones de IndexedDB nunca
+borran). Importante: la base pasó a la **versión 3** (fletes); una vez abierta con la app nueva, una app vieja ya no la abre.
 
 ## Checklist de validación física (marcar solo al hacerlo de verdad)
 
+Nada de esta lista se ha probado en un Android físico. Las pruebas automáticas (Chromium con perfil Pixel 7 y el
+teclado *emulado* encogiendo la ventana) **no** sustituyen estas comprobaciones: ver `docs/PRUEBAS.md`.
+
+Instalación y datos
 - [ ] Instala y se abre sin barra de navegador
 - [ ] Ícono correcto en la pantalla principal
-- [ ] Abre en modo avión tras cerrar y reabrir
-- [ ] Venta con teclado numérico cómodo (kilos, precio, billetes)
-- [ ] Venta sobrevive a cerrar/abrir la app
+- [ ] Abre en modo avión tras cerrar y reabrir (modo avión **real**, no simulado)
 - [ ] Más → "Almacenamiento" dice *persistente* (si no, exportar respaldos con frecuencia)
 - [ ] Exportar respaldo guarda el archivo en el teléfono y se puede restaurar
-- [ ] Rotar/bloquear pantalla a media venta no pierde nada
+- [ ] Rotar/bloquear pantalla a media venta o a media recepción no pierde nada
+- [ ] Si el teléfono ya tenía la versión anterior: al abrir la nueva aparece el aviso "La app se actualizó" y las
+      ventas, vales, precios e inventario siguen igual (hacer un respaldo **antes** de actualizar)
+
+Caja rápida
+- [ ] Venta con teclado numérico cómodo (kilos, precio, billetes)
+- [ ] Venta sobrevive a cerrar/abrir la app
+
+Teclado en pantalla (lo que más se parece a lo que falló en las pruebas)
+- [ ] Escribir un precio y tocar **Agregar variedad** al **primer** toque, sin que el teclado "se coma" el toque
+- [ ] En Recepción: escribir los kilos y tocar **Registrar recepción** al primer toque; con el teclado abierto
+      las pestañas de abajo se esconden y la barra con los kilos netos queda pegada arriba del teclado
+- [ ] Cerrar el teclado con el gesto/botón *atrás*: las pestañas vuelven aunque el campo siga seleccionado
+- [ ] Un campo seleccionado no queda tapado por la barra de registro ni por las pestañas
+- [ ] En la Caja las pestañas **no** se esconden aunque el teclado esté abierto
+
+Recepción (con balanza o con cajas/arpillas reales)
+- [ ] A granel, cajas × kilos, arpillas × kilos y bruto − tara dan los kilos netos que esperas
+- [ ] Doble toque rápido en **Confirmar** registra **una** sola recepción
+- [ ] Guardar borrador sin peso no suma; completarlo después sí suma una vez
+- [ ] Corregir kilos y anular dejan el rastro en Historial → Detalle
+- [ ] Todo lo anterior en modo avión
+
+Control de pesaje por flete (Inventario → Fletes)
+- [ ] Capturar un flete con bruto − tara en origen y neto directo en destino: la diferencia y el % coinciden con tu calculadora
+- [ ] Con el teclado abierto, el campo enfocado se ve y «Guardar flete» se alcanza al primer toque
+- [ ] Doble toque en «Guardar flete» deja UN solo flete
+- [ ] Exportar respaldo trae los fletes; restaurarlo en otra instalación los deja iguales
+
+Gesto o botón «atrás» (la app NO lo maneja: no usa el historial del navegador)
+- [ ] Con una hoja abierta (por ejemplo «Confirmar recepción»), «atrás»: anota qué pasa (lo probable es que cierre la app
+      en lugar de la hoja; lo capturado se conserva y se recupera al reabrir). Si molesta, hay que manejarlo en una versión futura
+- [ ] «Atrás» con el teclado abierto cierra solo el teclado y las pestañas vuelven
+
+Pantallas (360 px y 412 px de ancho)
+- [ ] Ninguna pantalla se corta a los lados; los botones se pueden tocar con el pulgar
+- [ ] Las seis pestañas se leen completas ("Recepción" no se recorta)
+- [ ] Las hojas de confirmación tienen siempre a la vista los botones de abajo

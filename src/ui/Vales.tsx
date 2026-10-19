@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { cancelVale, deliverVale, listVales } from '../db/repo';
 import { formatMoney, formatQty } from '../domain/money';
 import type { RefundMethod, Sale } from '../domain/types';
 import { errMsg, useApp } from './ctx';
+import { Sheet } from './Sheet';
 
 type State = 'pendiente' | 'entregado' | 'cancelado';
 const STATE_LABEL: Record<State, string> = {
@@ -23,18 +24,25 @@ export function Vales() {
   const [cancelling, setCancelling] = useState<Sale | null>(null);
   const [reason, setReason] = useState('');
   const [refund, setRefund] = useState<RefundMethod | ''>('');
+  // Guarda contra doble pulsación: el segundo toque no debe llegar a la base ni mostrar un error engañoso
+  // («ya fue entregado») sobre una acción que sí se hizo.
+  const busy = useRef(false);
 
   useEffect(() => {
     listVales(db, state).then(setVales);
   }, [db, version, state]);
 
   async function deliver(v: Sale) {
+    if (busy.current) return;
+    busy.current = true;
     try {
       await deliverVale(db, v.id);
       toast(`Vale V-${v.valeFolio} entregado`);
       bump();
     } catch (e) {
       toast(errMsg(e), 'error');
+    } finally {
+      busy.current = false;
     }
   }
 
@@ -45,7 +53,8 @@ export function Vales() {
   }
 
   async function confirmCancel() {
-    if (!cancelling || !refund) return;
+    if (!cancelling || !refund || busy.current) return;
+    busy.current = true;
     try {
       await cancelVale(db, cancelling.id, reason, refund);
       toast(`Vale V-${cancelling.valeFolio} cancelado`);
@@ -53,6 +62,8 @@ export function Vales() {
       bump();
     } catch (e) {
       toast(errMsg(e), 'error');
+    } finally {
+      busy.current = false;
     }
   }
 
@@ -60,7 +71,7 @@ export function Vales() {
     <section data-testid="vales">
       <h2>Vales</h2>
       <p class="hint">Ya están pagados. Entregar solo descuenta la mercancía reservada; no cobra otra vez.</p>
-      <div class="tabs-state" role="tablist">
+      <div class="tabs-state n3" role="tablist">
         {(Object.keys(STATE_LABEL) as State[]).map((st) => (
           <button
             key={st}
@@ -112,29 +123,11 @@ export function Vales() {
       ))}
 
       {cancelling && (
-        <div class="overlay" role="dialog" aria-modal="true" data-testid="cancel-sheet">
-          <div class="sheet">
-            <h2>Cancelar vale V-{cancelling.valeFolio}</h2>
-            <p class="hint">
-              El cliente pagó {formatMoney(cancelling.totalCents)}. Indica qué pasó con ese dinero: el sistema no
-              asume que se devuelve.
-            </p>
-            <label class="field">
-              <span>Motivo</span>
-              <input data-testid="cancel-reason" value={reason} onInput={(e) => setReason((e.target as HTMLInputElement).value)} />
-            </label>
-            {(Object.keys(REFUND_LABEL) as RefundMethod[]).map((m) => (
-              <label class="radio" key={m}>
-                <input
-                  type="radio"
-                  name="refund"
-                  data-testid={`refund-${m}`}
-                  checked={refund === m}
-                  onChange={() => setRefund(m)}
-                />
-                {REFUND_LABEL[m]}
-              </label>
-            ))}
+        <Sheet
+          title={`Cancelar vale V-${cancelling.valeFolio}`}
+          testid="cancel-sheet"
+          onClose={() => setCancelling(null)}
+          foot={
             <div class="actions two">
               <button data-testid="cancel-back" onClick={() => setCancelling(null)}>
                 Volver
@@ -148,8 +141,34 @@ export function Vales() {
                 Cancelar vale
               </button>
             </div>
-          </div>
-        </div>
+          }
+        >
+          <p class="hint">
+            El cliente pagó {formatMoney(cancelling.totalCents)}. Indica qué pasó con ese dinero: el sistema no
+            asume que se devuelve.
+          </p>
+          <label class="field">
+            <span>Motivo</span>
+            <input
+              data-testid="cancel-reason"
+              maxLength={300}
+              value={reason}
+              onInput={(e) => setReason((e.target as HTMLInputElement).value)}
+            />
+          </label>
+          {(Object.keys(REFUND_LABEL) as RefundMethod[]).map((m) => (
+            <label class="radio" key={m}>
+              <input
+                type="radio"
+                name="refund"
+                data-testid={`refund-${m}`}
+                checked={refund === m}
+                onChange={() => setRefund(m)}
+              />
+              {REFUND_LABEL[m]}
+            </label>
+          ))}
+        </Sheet>
       )}
     </section>
   );

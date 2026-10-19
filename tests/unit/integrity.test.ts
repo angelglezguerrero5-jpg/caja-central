@@ -46,53 +46,71 @@ describe('migraciones versionadas', () => {
     expect(await listSalesByDay(db, localDay())).toHaveLength(1);
   });
 
-  it('subir de versión ejecuta solo las migraciones nuevas y NO borra datos', async () => {
-    await seedIfEmpty(db);
-    const p = (await listProducts(db))[0];
-    await createSale(db, { cart: addLine([], p, 1000), paymentMethod: 'tarjeta', receivedCents: 0, allowNegativeStock: true });
-    db.close();
+  it('subir de versión ejecuta solo las migraciones nuevas (las reales 2 y 3 incluidas) y NO borra datos', async () => {
+    // Base REAL v1: se abre explícitamente con el esquema de la versión 1.
+    const n = `mig-${newId()}`;
+    let d = await openDatabase(n, { version: 1 });
+    expect(d.version).toBe(1);
+    expect(d.objectStoreNames.contains('receptions' as never)).toBe(false);
+    expect(d.objectStoreNames.contains('freights' as never)).toBe(false);
+    await seedIfEmpty(d);
+    const p = (await listProducts(d))[0];
+    await createSale(d, { cart: addLine([], p, 1000), paymentMethod: 'tarjeta', receivedCents: 0, allowNegativeStock: true });
+    d.close();
 
     const ran: number[] = [];
-    db = await openDatabase(name, {
-      version: 3,
+    d = await openDatabase(n, {
+      version: 5,
       migrations: {
-        2: (_d, tx) => {
-          ran.push(2);
+        4: (_d, tx) => {
+          ran.push(4);
           tx.objectStore('products').createIndex('byName', 'name');
         },
-        3: (d) => {
-          ran.push(3);
-          if (!d.objectStoreNames.contains('extra')) d.createObjectStore('extra', { keyPath: 'id' });
+        5: (dd) => {
+          ran.push(5);
+          if (!dd.objectStoreNames.contains('extra')) dd.createObjectStore('extra', { keyPath: 'id' });
         },
       },
     });
-    expect(ran).toEqual([2, 3]); // la 1 ya estaba aplicada
-    expect(await listProducts(db)).toHaveLength(3);
-    expect(await listSalesByDay(db, localDay())).toHaveLength(1);
-    expect(db.objectStoreNames.contains('extra' as never)).toBe(true);
-    expect((await auditDatabase(db)).ok).toBe(true);
+    expect(ran).toEqual([4, 5]); // 1 ya estaba aplicada; la 2 y la 3 reales corrieron sin tocar los datos
+    expect(d.objectStoreNames.contains('receptions' as never)).toBe(true); // creada por la migración 2 real
+    expect(d.objectStoreNames.contains('freights' as never)).toBe(true); // creada por la migración 3 real
+    expect(d.objectStoreNames.contains('extra' as never)).toBe(true);
+    expect(await listProducts(d)).toHaveLength(3);
+    expect(await listSalesByDay(d, localDay())).toHaveLength(1);
+    expect((await auditDatabase(d)).ok).toBe(true);
+    d.close();
   });
 
   it('si una migración falla se revierte entera y los datos quedan intactos en la versión anterior', async () => {
-    await seedIfEmpty(db);
-    db.close();
+    const n = `mig-${newId()}`;
+    let d = await openDatabase(n, { version: 1 });
+    await seedIfEmpty(d);
+    d.close();
     await expect(
-      openDatabase(name, {
+      openDatabase(n, {
         version: 2,
         migrations: {
-          2: (d) => {
-            d.createObjectStore('nuevo', { keyPath: 'id' });
+          2: (dd) => {
+            dd.createObjectStore('nuevo', { keyPath: 'id' });
             throw new Error('migración rota');
           },
         },
       }),
     ).rejects.toThrow();
-    const raw = await openDB(name); // sin versión: abre la que haya
+    const raw = await openDB(n); // sin versión: abre la que haya
     expect(raw.version).toBe(1);
     expect(raw.objectStoreNames.contains('nuevo')).toBe(false);
+    expect(raw.objectStoreNames.contains('receptions')).toBe(false);
+    expect(raw.objectStoreNames.contains('freights')).toBe(false);
     expect((await raw.getAll('products')).length).toBe(3);
     raw.close();
-    db = await openDatabase(name);
+    // Y con las migraciones reales la base sube sin problema, con los mismos datos.
+    d = await openDatabase(n);
+    expect(d.version).toBe(3);
+    expect(d.objectStoreNames.contains('freights' as never)).toBe(true);
+    expect(await listProducts(d)).toHaveLength(3);
+    d.close();
   });
 });
 

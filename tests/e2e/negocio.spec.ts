@@ -89,6 +89,10 @@ test('respaldo: exportar, borrar datos y restaurar recupera ventas y folio', asy
   await openApp(p2, { seed: false }); // dispositivo nuevo: sin variedades, todo viene del respaldo
   await tab(p2, 'mas');
   await p2.getByTestId('import-file').setInputFiles(path);
+  // La restauración muestra primero qué trae el respaldo y qué se reemplaza; nada cambia hasta confirmar.
+  await expect(p2.getByTestId('restore-sheet')).toBeVisible();
+  await expect(p2.getByTestId('restore-summary')).toContainText('2 ventas');
+  await p2.getByTestId('restore-confirm').click();
   await expect(p2.getByTestId('toast')).toContainText('restaurado');
   await tab(p2, 'corte');
   await expect(p2.getByTestId('sale-row')).toHaveCount(2);
@@ -342,6 +346,6 @@ test('doble pulsación en "Registrar salida" y en "Guardar entrada" no registra 
   await row.getByTestId('move-entrada').click();
   await row.getByTestId('move-qty').fill('10');
   await row.getByTestId('move-save').dblclick();
-  await expect(page.getByTestId('toast')).toContainText('Entrada registrada');
+  await expect(page.getByTestId('toast')).toContainText('Entrada manual registrada');
   await expect(row.getByTestId('stock-physical')).toHaveText('10 kg'); // no 20
 });

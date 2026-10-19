@@ -112,18 +112,19 @@ test('pago con transferencia no pide efectivo', async ({ page }) => {
 
 test('primer arranque: la app no inventa variedades ni precios; se configura desde la caja', async ({ page }) => {
   await openApp(page, { seed: false });
-  await expect(page.getByTestId('caja-vacia')).toBeVisible();
+  const empty = page.getByTestId('caja-vacia'); // (Recepción, oculta, tiene su propio formulario de alta)
+  await expect(empty).toBeVisible();
   await expect(page.getByTestId('variety')).toHaveCount(0);
   await expect(page.getByTestId('kg')).toHaveCount(0);
 
   // Sin precio no se puede dar de alta
-  await page.getByTestId('new-name').fill('Limón persa');
-  await page.getByTestId('add-product').click();
+  await empty.getByTestId('new-name').fill('Limón persa');
+  await empty.getByTestId('add-product').click();
   await expect(page.getByTestId('toast')).toContainText('precio');
   await expect(page.getByTestId('caja-vacia')).toBeVisible();
 
-  await page.getByTestId('new-price').fill('27.5');
-  await page.getByTestId('add-product').click();
+  await empty.getByTestId('new-price').fill('27.5');
+  await empty.getByTestId('add-product').click();
   await expect(page.getByTestId('toast')).toContainText('Variedad agregada');
   await expect(page.getByTestId('caja-vacia')).toHaveCount(0);
   await expect(page.getByTestId('price')).toHaveValue('27.50'); // el precio que escribió el usuario, no uno inventado

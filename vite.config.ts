@@ -11,6 +11,7 @@ function offlineServiceWorker(): Plugin {
     '/',
     '/index.html',
     '/manifest.webmanifest',
+    '/icons/apple-touch-icon.png',
     '/icons/icon-192.png',
     '/icons/icon-512.png',
     '/icons/maskable-512.png',
@@ -38,7 +39,8 @@ self.addEventListener('install', (e) => {
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      // Solo las cachés propias (prefijo limones-): otras aplicaciones del mismo origen no se tocan.
+      .then((keys) => Promise.all(keys.filter((k) => k.startsWith('limones-') && k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim()),
   );
 });
@@ -51,14 +53,17 @@ self.addEventListener('fetch', (e) => {
   e.respondWith(
     (async () => {
       const cache = await caches.open(CACHE);
-      const hit = await cache.match(req, { ignoreSearch: true });
+      // ignoreVary: los módulos y hojas de estilo llevan la cabecera Origin y algunos servidores (entre ellos
+      // \`vite preview\`, la ruta A de docs/ANDROID.md) responden \`Vary: Origin\`. Sin ignoreVary la caché no reconoce
+      // sus propios archivos y, con la red realmente cortada, la app abre en blanco.
+      const hit = await cache.match(req, { ignoreSearch: true, ignoreVary: true });
       if (hit) return hit;
       try {
         return await fetch(req);
       } catch (err) {
         // Navegación sin red: se sirve la app desde caché.
         if (req.mode === 'navigate') {
-          const shell = (await cache.match('/index.html')) || (await cache.match('/'));
+          const shell = (await cache.match('/index.html', { ignoreVary: true })) || (await cache.match('/', { ignoreVary: true }));
           if (shell) return shell;
         }
         throw err;

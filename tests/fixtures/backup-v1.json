@@ -1,0 +1,395 @@
+{
+  "app": "sistema-venta-limones",
+  "version": 1,
+  "exportedAt": "2026-10-10T22:11:06.915Z",
+  "products": [
+    {
+      "name": "Limón con semilla",
+      "unit": "kg",
+      "priceCents": 3500,
+      "id": "53a44646-c8b8-4adb-8364-7c0c215b1fde",
+      "active": true,
+      "sort": 2,
+      "physicalMilli": 270000,
+      "reservedMilli": 0,
+      "updatedAt": "2026-10-10T22:11:06.909Z"
+    },
+    {
+      "id": "545d274d-7a2c-4f40-b689-4a9c623a2148",
+      "name": "Limón sin semilla",
+      "quality": "Torreones",
+      "unit": "kg",
+      "priceCents": 2800,
+      "active": true,
+      "sort": 3,
+      "physicalMilli": 0,
+      "reservedMilli": 0,
+      "updatedAt": "2026-10-10T22:11:06.895Z"
+    },
+    {
+      "name": "Limón persa",
+      "quality": "Primera",
+      "unit": "kg",
+      "priceCents": 3200,
+      "id": "6b9c5e29-ee0e-4287-a74f-9c1f58e45eb2",
+      "active": true,
+      "sort": 0,
+      "physicalMilli": 459500,
+      "reservedMilli": 50000,
+      "updatedAt": "2026-10-10T22:11:06.913Z"
+    },
+    {
+      "name": "Limón persa",
+      "quality": "Segunda",
+      "unit": "kg",
+      "priceCents": 2000,
+      "id": "e6d52a30-1f48-4ae8-9b62-cd4c2dec8f83",
+      "active": true,
+      "sort": 1,
+      "physicalMilli": 200000,
+      "reservedMilli": 0,
+      "updatedAt": "2026-10-10T22:11:06.905Z"
+    }
+  ],
+  "sales": [
+    {
+      "id": "10a8c7ab-1cb6-4478-aaa4-d3c2d3fd0027",
+      "folio": 5,
+      "createdAt": "2026-10-10T22:11:06.905Z",
+      "day": "2026-10-10",
+      "shiftId": "2add2dba-1da0-4856-aec0-05fe078e13da",
+      "items": [
+        {
+          "productId": "6b9c5e29-ee0e-4287-a74f-9c1f58e45eb2",
+          "name": "Limón persa · Primera",
+          "unit": "kg",
+          "qtyMilli": 50000,
+          "unitPriceCents": 3000,
+          "totalCents": 150000
+        }
+      ],
+      "totalCents": 150000,
+      "paymentMethod": "efectivo",
+      "receivedCents": 150000,
+      "changeCents": 0,
+      "status": "completada",
+      "delivery": "pendiente",
+      "valeFolio": 2,
+      "customerName": "Taquería Lupita"
+    },
+    {
+      "id": "16c2e089-2735-4e49-b3b5-235588ed0f1b",
+      "folio": 1,
+      "createdAt": "2026-10-10T22:11:06.897Z",
+      "day": "2026-10-10",
+      "shiftId": "ef6eefa2-cfc7-49d7-a61b-a49ee05b1ba6",
+      "items": [
+        {
+          "productId": "6b9c5e29-ee0e-4287-a74f-9c1f58e45eb2",
+          "name": "Limón persa · Primera",
+          "unit": "kg",
+          "qtyMilli": 12500,
+          "unitPriceCents": 3000,
+          "totalCents": 37500
+        }
+      ],
+      "totalCents": 37500,
+      "paymentMethod": "efectivo",
+      "receivedCents": 40000,
+      "changeCents": 2500,
+      "status": "completada",
+      "delivery": "inmediata"
+    },
+    {
+      "id": "27557181-91c3-4c45-b9fc-88501f5d3859",
+      "folio": 2,
+      "createdAt": "2026-10-10T22:11:06.899Z",
+      "day": "2026-10-10",
+      "shiftId": "ef6eefa2-cfc7-49d7-a61b-a49ee05b1ba6",
+      "items": [
+        {
+          "productId": "53a44646-c8b8-4adb-8364-7c0c215b1fde",
+          "name": "Limón con semilla",
+          "unit": "kg",
+          "qtyMilli": 30000,
+          "unitPriceCents": 3500,
+          "totalCents": 105000
+        }
+      ],
+      "totalCents": 105000,
+      "paymentMethod": "transferencia",
+      "receivedCents": 105000,
+      "changeCents": 0,
+      "status": "completada",
+      "delivery": "inmediata"
+    },
+    {
+      "id": "79474db3-0e94-45d0-8302-fbba9f949107",
+      "folio": 7,
+      "createdAt": "2026-10-10T22:11:06.913Z",
+      "day": "2026-10-10",
+      "shiftId": "2add2dba-1da0-4856-aec0-05fe078e13da",
+      "items": [
+        {
+          "productId": "6b9c5e29-ee0e-4287-a74f-9c1f58e45eb2",
+          "name": "Limón persa · Primera",
+          "unit": "kg",
+          "qtyMilli": 8000,
+          "unitPriceCents": 3200,
+          "totalCents": 25600
+        }
+      ],
+      "totalCents": 25600,
+      "paymentMethod": "efectivo",
+      "receivedCents": 30000,
+      "changeCents": 4400,
+      "status": "completada",
+      "delivery": "inmediata"
+    },
+    {
+      "id": "861463a3-5b2a-463e-ad08-dcb9e27466c6",
+      "folio": 3,
+      "createdAt": "2026-10-10T22:11:06.900Z",
+      "day": "2026-10-10",
+      "shiftId": "ef6eefa2-cfc7-49d7-a61b-a49ee05b1ba6",
+      "items": [
+        {
+          "productId": "6b9c5e29-ee0e-4287-a74f-9c1f58e45eb2",
+          "name": "Limón persa · Primera",
+          "unit": "kg",
+          "qtyMilli": 20000,
+          "unitPriceCents": 3000,
+          "totalCents": 60000
+        }
+      ],
+      "totalCents": 60000,
+      "paymentMethod": "efectivo",
+      "receivedCents": 60000,
+      "changeCents": 0,
+      "status": "completada",
+      "delivery": "entregado",
+      "valeFolio": 1,
+      "customerName": "Doña Mary",
+      "deliveredAt": "2026-10-10T22:11:06.901Z"
+    },
+    {
+      "id": "97fc9072-0924-4acb-8c9e-fe94b69edeb5",
+      "folio": 6,
+      "createdAt": "2026-10-10T22:11:06.906Z",
+      "day": "2026-10-10",
+      "shiftId": "2add2dba-1da0-4856-aec0-05fe078e13da",
+      "items": [
+        {
+          "productId": "53a44646-c8b8-4adb-8364-7c0c215b1fde",
+          "name": "Limón con semilla",
+          "unit": "kg",
+          "qtyMilli": 10000,
+          "unitPriceCents": 3500,
+          "totalCents": 35000
+        }
+      ],
+      "totalCents": 35000,
+      "paymentMethod": "efectivo",
+      "receivedCents": 35000,
+      "changeCents": 0,
+      "status": "completada",
+      "delivery": "cancelado",
+      "valeFolio": 3,
+      "cancelReason": "el cliente ya no vino",
+      "cancelledAt": "2026-10-10T22:11:06.909Z",
+      "refundMethod": "efectivo",
+      "refundCents": 35000
+    },
+    {
+      "id": "a2642998-5ef8-4122-9932-e8d0738b5260",
+      "folio": 4,
+      "createdAt": "2026-10-10T22:11:06.904Z",
+      "day": "2026-10-10",
+      "shiftId": "2add2dba-1da0-4856-aec0-05fe078e13da",
+      "items": [
+        {
+          "productId": "e6d52a30-1f48-4ae8-9b62-cd4c2dec8f83",
+          "name": "Limón persa · Segunda",
+          "unit": "kg",
+          "qtyMilli": 5000,
+          "unitPriceCents": 2000,
+          "totalCents": 10000
+        }
+      ],
+      "totalCents": 10000,
+      "paymentMethod": "tarjeta",
+      "receivedCents": 10000,
+      "changeCents": 0,
+      "status": "anulada",
+      "delivery": "inmediata",
+      "voidReason": "error de captura",
+      "voidedAt": "2026-10-10T22:11:06.905Z"
+    }
+  ],
+  "shifts": [
+    {
+      "id": "2add2dba-1da0-4856-aec0-05fe078e13da",
+      "openedAt": "2026-10-10T22:11:06.904Z",
+      "openingCashCents": 10000
+    },
+    {
+      "id": "ef6eefa2-cfc7-49d7-a61b-a49ee05b1ba6",
+      "openedAt": "2026-10-10T22:11:06.897Z",
+      "openingCashCents": 20000,
+      "closedAt": "2026-10-10T22:11:06.903Z",
+      "countedCashCents": 56500,
+      "expectedCashCents": 116000,
+      "differenceCents": -59500
+    }
+  ],
+  "cashMovements": [
+    {
+      "id": "1770cce1-25d8-4cbe-b671-26a336e4ccc1",
+      "shiftId": "2add2dba-1da0-4856-aec0-05fe078e13da",
+      "createdAt": "2026-10-10T22:11:06.909Z",
+      "type": "devolucion",
+      "amountCents": 35000,
+      "concept": "Devolución vale V-3",
+      "saleId": "97fc9072-0924-4acb-8c9e-fe94b69edeb5"
+    },
+    {
+      "id": "96c0261e-116d-4f30-8d61-c06c31aef736",
+      "shiftId": "ef6eefa2-cfc7-49d7-a61b-a49ee05b1ba6",
+      "createdAt": "2026-10-10T22:11:06.902Z",
+      "type": "salida",
+      "amountCents": 1500,
+      "concept": "bolsas"
+    }
+  ],
+  "stockMoves": [
+    {
+      "id": "123bb2df-dc03-49a4-8b56-4649d619ab01",
+      "productId": "6b9c5e29-ee0e-4287-a74f-9c1f58e45eb2",
+      "createdAt": "2026-10-10T22:11:06.900Z",
+      "type": "reserva",
+      "deltaMilli": 0,
+      "reservedDeltaMilli": 20000,
+      "note": "Vale V-1",
+      "saleId": "861463a3-5b2a-463e-ad08-dcb9e27466c6"
+    },
+    {
+      "id": "1977fb8c-2107-43ec-8f6d-d4b43609a670",
+      "productId": "e6d52a30-1f48-4ae8-9b62-cd4c2dec8f83",
+      "createdAt": "2026-10-10T22:11:06.904Z",
+      "type": "venta",
+      "deltaMilli": -5000,
+      "reservedDeltaMilli": 0,
+      "note": "Folio 4",
+      "saleId": "a2642998-5ef8-4122-9932-e8d0738b5260"
+    },
+    {
+      "id": "1ab3c331-0cdd-4ed5-af95-5eb4e2d243c7",
+      "productId": "6b9c5e29-ee0e-4287-a74f-9c1f58e45eb2",
+      "createdAt": "2026-10-10T22:11:06.913Z",
+      "type": "venta",
+      "deltaMilli": -8000,
+      "reservedDeltaMilli": 0,
+      "note": "Folio 7",
+      "saleId": "79474db3-0e94-45d0-8302-fbba9f949107"
+    },
+    {
+      "id": "20bb6e41-77e1-4724-b8eb-8413d2d202fd",
+      "productId": "6b9c5e29-ee0e-4287-a74f-9c1f58e45eb2",
+      "createdAt": "2026-10-10T22:11:06.895Z",
+      "type": "entrada",
+      "deltaMilli": 500000,
+      "reservedDeltaMilli": 0,
+      "note": "inventario inicial"
+    },
+    {
+      "id": "4658c5d5-4641-4b15-b307-f528c60b6476",
+      "productId": "e6d52a30-1f48-4ae8-9b62-cd4c2dec8f83",
+      "createdAt": "2026-10-10T22:11:06.905Z",
+      "type": "anulacion",
+      "deltaMilli": 5000,
+      "reservedDeltaMilli": 0,
+      "note": "Anula 4",
+      "saleId": "a2642998-5ef8-4122-9932-e8d0738b5260"
+    },
+    {
+      "id": "4fe8235f-058c-472f-8575-ad6e915c02cb",
+      "productId": "6b9c5e29-ee0e-4287-a74f-9c1f58e45eb2",
+      "createdAt": "2026-10-10T22:11:06.897Z",
+      "type": "venta",
+      "deltaMilli": -12500,
+      "reservedDeltaMilli": 0,
+      "note": "Folio 1",
+      "saleId": "16c2e089-2735-4e49-b3b5-235588ed0f1b"
+    },
+    {
+      "id": "4feebcaf-70d8-49d8-817c-fed139fecbc4",
+      "productId": "53a44646-c8b8-4adb-8364-7c0c215b1fde",
+      "createdAt": "2026-10-10T22:11:06.906Z",
+      "type": "reserva",
+      "deltaMilli": 0,
+      "reservedDeltaMilli": 10000,
+      "note": "Vale V-3",
+      "saleId": "97fc9072-0924-4acb-8c9e-fe94b69edeb5"
+    },
+    {
+      "id": "9b4a01d3-aaa4-4d7a-bb85-3864d0062f4d",
+      "productId": "e6d52a30-1f48-4ae8-9b62-cd4c2dec8f83",
+      "createdAt": "2026-10-10T22:11:06.896Z",
+      "type": "entrada",
+      "deltaMilli": 200000,
+      "reservedDeltaMilli": 0,
+      "note": ""
+    },
+    {
+      "id": "aba8f26d-6eaf-44a5-8e79-faad6565ad92",
+      "productId": "6b9c5e29-ee0e-4287-a74f-9c1f58e45eb2",
+      "createdAt": "2026-10-10T22:11:06.905Z",
+      "type": "reserva",
+      "deltaMilli": 0,
+      "reservedDeltaMilli": 50000,
+      "note": "Vale V-2",
+      "saleId": "10a8c7ab-1cb6-4478-aaa4-d3c2d3fd0027"
+    },
+    {
+      "id": "b4fa07f0-c01b-4c6a-90a5-7cf72a960826",
+      "productId": "6b9c5e29-ee0e-4287-a74f-9c1f58e45eb2",
+      "createdAt": "2026-10-10T22:11:06.901Z",
+      "type": "entrega_vale",
+      "deltaMilli": -20000,
+      "reservedDeltaMilli": -20000,
+      "note": "Vale V-1",
+      "saleId": "861463a3-5b2a-463e-ad08-dcb9e27466c6"
+    },
+    {
+      "id": "bfed11d3-d31d-451f-a889-c8379ea128fb",
+      "productId": "53a44646-c8b8-4adb-8364-7c0c215b1fde",
+      "createdAt": "2026-10-10T22:11:06.899Z",
+      "type": "venta",
+      "deltaMilli": -30000,
+      "reservedDeltaMilli": 0,
+      "note": "Folio 2",
+      "saleId": "27557181-91c3-4c45-b9fc-88501f5d3859"
+    },
+    {
+      "id": "c1587092-e5b7-44c9-a0db-c9c801a03cbf",
+      "productId": "53a44646-c8b8-4adb-8364-7c0c215b1fde",
+      "createdAt": "2026-10-10T22:11:06.909Z",
+      "type": "anulacion",
+      "deltaMilli": 0,
+      "reservedDeltaMilli": -10000,
+      "note": "Cancela V-3",
+      "saleId": "97fc9072-0924-4acb-8c9e-fe94b69edeb5"
+    },
+    {
+      "id": "c2f06af6-cfbb-4215-b4a2-0cc3cf13e3eb",
+      "productId": "53a44646-c8b8-4adb-8364-7c0c215b1fde",
+      "createdAt": "2026-10-10T22:11:06.896Z",
+      "type": "entrada",
+      "deltaMilli": 300000,
+      "reservedDeltaMilli": 0,
+      "note": ""
+    }
+  ],
+  "nextFolio": 8,
+  "nextValeFolio": 4
+}

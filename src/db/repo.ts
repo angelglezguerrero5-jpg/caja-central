@@ -1,12 +1,27 @@
 import { openDB, type DBSchema, type IDBPDatabase, type IDBPTransaction } from 'idb';
 import { checkPayment, toSaleItems } from '../domain/cart';
+import {
+  canonicalizeClass,
+  classValueError,
+  classificationKey,
+  classificationOf,
+  cleanClassValue,
+  productLabel,
+} from '../domain/classification';
+import { MAX_CONCEPT, MAX_NAME, MAX_REASON, checkedText } from '../domain/limits';
+import { MAX_MONEY_CENTS, MAX_PRICE_CENTS, MAX_QTY_MILLI, MAX_STOCK_MILLI } from '../domain/money';
+import { validateFreightSettings } from '../domain/freight';
 import { buildShiftReport, localDay } from '../domain/report';
+import { validateBackup } from './backup';
 import type {
   Backup,
   CartLine,
   CashMovement,
+  Freight,
+  FreightSettings,
   PaymentMethod,
   Product,
+  Reception,
   RefundMethod,
   Sale,
   Shift,
@@ -15,7 +30,7 @@ import type {
   Unit,
 } from '../domain/types';
 
-type MetaKey = 'nextFolio' | 'nextValeFolio' | 'currentShiftId' | 'cartDraft';
+type MetaKey = 'nextFolio' | 'nextValeFolio' | 'nextReceptionFolio' | 'currentShiftId' | 'cartDraft' | 'freightSettings';
 
 interface LimonesDB extends DBSchema {
   products: { key: string; value: Product };
@@ -26,14 +41,20 @@ interface LimonesDB extends DBSchema {
   };
   shifts: { key: string; value: Shift; indexes: { byOpenedAt: string } };
   cashMovements: { key: string; value: CashMovement; indexes: { byShift: string } };
-  stockMoves: { key: string; value: StockMove; indexes: { byProduct: string } };
+  stockMoves: { key: string; value: StockMove; indexes: { byProduct: string; byReception: string } };
+  receptions: {
+    key: string;
+    value: Reception;
+    indexes: { byStatus: string; byDay: string; byProduct: string; byFolio: number };
+  };
+  freights: { key: string; value: Freight; indexes: { byFolioKey: string; byStatus: string; byDay: string } };
   meta: { key: MetaKey; value: { key: MetaKey; value: unknown } };
 }
 
 export type DB = IDBPDatabase<LimonesDB>;
 
 export const DB_NAME = 'venta-limones';
-export const DB_VERSION = 1;
+export const DB_VERSION = 3;
 
 // Las migraciones trabajan con el API crudo de idb (sin el esquema tipado): tocan versiones viejas.
 export type Migration = (db: IDBPDatabase<unknown>, tx: IDBPTransaction<unknown, string[], 'versionchange'>) => void;
@@ -64,6 +85,27 @@ export const MIGRATIONS: Record<number, Migration> = {
     stock?.createIndex('byProduct', 'productId');
     make('meta', { keyPath: 'key' });
   },
+  // v2: recepción de mercancía. Solo AÑADE (store e índice); no toca productos, ventas, vales, turnos ni movimientos.
+  2: (db, tx) => {
+    if (!db.objectStoreNames.contains('receptions')) {
+      const r = db.createObjectStore('receptions', { keyPath: 'id' });
+      r.createIndex('byStatus', 'status');
+      r.createIndex('byDay', 'day');
+      r.createIndex('byProduct', 'productId');
+      r.createIndex('byFolio', 'folio', { unique: true });
+    }
+    const moves = tx.objectStore('stockMoves');
+    if (!moves.indexNames.contains('byReception')) moves.createIndex('byReception', 'receptionId');
+  },
+  // v3: control de pesaje por flete. Solo AÑADE un almacén (con el folio único como índice); no toca nada de lo anterior.
+  3: (db) => {
+    if (!db.objectStoreNames.contains('freights')) {
+      const f = db.createObjectStore('freights', { keyPath: 'id' });
+      f.createIndex('byFolioKey', 'folioKey', { unique: true });
+      f.createIndex('byStatus', 'status');
+      f.createIndex('byDay', 'day');
+    }
+  },
 };
 
 export interface OpenOptions {
@@ -72,6 +114,15 @@ export interface OpenOptions {
   migrations?: Record<number, Migration>;
   /** Se llama si otra pestaña pide actualizar el esquema y esta debe cerrarse. */
   onBlocking?: () => void;
+  /** Se llama en la pestaña NUEVA cuando otra pestaña (versión anterior) todavía tiene la base abierta y impide actualizar. */
+  onBlocked?: () => void;
+  /**
+   * Se llama si el NAVEGADOR cierra la conexión por su cuenta (no cuando la app llama a close()). Pasa, por ejemplo, en
+   * iPhone cuando la app estuvo suspendida mucho rato: la conexión muere y hay que volver a abrir la base.
+   */
+  onTerminated?: () => void;
+  /** Se llama cuando el esquema de una base que YA existía se actualizó (no en una instalación nueva). */
+  onUpgrade?: (oldVersion: number, newVersion: number) => void;
 }
 
 // Los helpers internos reciben transacciones con distintos conjuntos de
@@ -99,22 +150,36 @@ export function openDatabase(name = DB_NAME, opts: OpenOptions = {}): Promise<DB
   const version = opts.version ?? DB_VERSION;
   const migrations = { ...MIGRATIONS, ...opts.migrations };
   let ref: DB | undefined;
+  let upgradedFrom: number | undefined;
   return openDB<LimonesDB>(name, version, {
     upgrade(db, oldVersion, _newVersion, tx) {
       tx.done.catch(() => undefined); // si una migración falla, el error llega por openDB
       for (let v = oldVersion + 1; v <= version; v++) {
         migrations[v]?.(db as unknown as IDBPDatabase<unknown>, tx as never);
       }
+      if (oldVersion >= 1) upgradedFrom = oldVersion;
+    },
+    // Otra pestaña con una versión anterior sigue abierta y bloquea la actualización: se avisa en esta.
+    blocked() {
+      opts.onBlocked?.();
     },
     // Otra pestaña con una versión nueva espera: se cierra esta conexión para no bloquearla.
     blocking() {
       ref?.close();
       opts.onBlocking?.();
     },
-  }).then((db) => (ref = db));
+    terminated() {
+      opts.onTerminated?.();
+    },
+  }).then((db) => {
+    ref = db;
+    // Solo si la actualización terminó bien (si falla, openDB rechaza y nunca se llega aquí).
+    if (upgradedFrom !== undefined) opts.onUpgrade?.(upgradedFrom, version);
+    return db;
+  });
 }
 
-const now = () => new Date().toISOString();
+export const now = () => new Date().toISOString();
 
 /**
  * Abre una transacción de escritura. El rechazo de `tx.done` se marca como
@@ -122,7 +187,9 @@ const now = () => new Date().toISOString();
  * termina como "unhandled rejection".
  */
 function rw(db: DB, stores: string[]): AnyTx {
-  const tx = db.transaction(stores as never, 'readwrite');
+  // durability 'strict': el navegador no confirma hasta que el dato esté en disco (un apagón justo después de
+  // "Venta guardada" o "Recepción registrada" no debe perder esa última escritura).
+  const tx = db.transaction(stores as never, 'readwrite', { durability: 'strict' } as never);
   tx.done.catch(() => undefined);
   return tx;
 }
@@ -151,7 +218,7 @@ export async function runRw<T>(db: DB, stores: string[], fn: (tx: AnyTx) => Prom
 }
 
 /** Aborta la transacción y devuelve el error para lanzarlo. */
-function abortWith(tx: AnyTx, message: string): Error {
+export function abortWith(tx: AnyTx, message: string): Error {
   try {
     tx.abort();
   } catch {
@@ -179,6 +246,21 @@ export class InsufficientStockError extends Error {
         shortages
           .map((s) => `${s.name} (disponible ${s.availableMilli / 1000}, se piden ${s.neededMilli / 1000})`)
           .join('; '),
+    );
+  }
+}
+
+/** La operación dejaría el disponible en negativo; se necesita autorización explícita para continuar. */
+export class NegativeStockError extends Error {
+  constructor(
+    public availableAfterMilli: number,
+    public label: string,
+    public reservedMilli: number,
+  ) {
+    super(
+      `Quedaría disponible negativo (${availableAfterMilli / 1000} kg) en ${label}` +
+        (reservedMilli > 0 ? ` (hay ${reservedMilli / 1000} kg reservados en vales)` : '') +
+        '. Se requiere autorización.',
     );
   }
 }
@@ -231,30 +313,83 @@ export async function getProduct(db: DB, id: string): Promise<Product | undefine
 
 export interface ProductInput {
   id?: string;
+  /** Tipo / variedad. */
   name: string;
+  origin?: string;
   quality?: string;
+  caliber?: string;
   unit: Unit;
+  /** Centavos por unidad. Debe ser > 0, salvo que `pendingPrice` sea true (entonces 0). */
   priceCents: number;
+  /** true = "sin precio todavía": se necesita para dar de alta una clasificación sin inventar un precio. */
+  pendingPrice?: boolean;
   active: boolean;
 }
 
-/** Crea o edita una variedad. La existencia NO se edita aquí (usa movimientos). */
+const UNIT_LIST: readonly Unit[] = ['kg', 'pieza', 'caja', 'arpilla'];
+
+/**
+ * Crea o edita un producto (combinación variedad · procedencia · calidad · calibre · unidad).
+ * La existencia NO se edita aquí (usa movimientos). Los textos se canonizan contra los valores ya conocidos para
+ * no crear duplicados por diferencias de escritura, y dos productos con la misma clave no pueden coexistir.
+ */
 export async function saveProduct(db: DB, input: ProductInput): Promise<Product> {
-  const name = input.name.trim();
-  const quality = input.quality?.trim() || undefined;
-  if (!name) throw new Error('El nombre es obligatorio');
-  assertPositiveInt(input.priceCents, 'El precio debe ser mayor a cero');
-  return runRw(db, ['products'], async (tx) => {
+  if (!UNIT_LIST.includes(input.unit)) throw new Error('Unidad inválida');
+  if (input.pendingPrice) {
+    if (input.priceCents !== 0) throw new Error('Un producto sin precio debe tener precio 0');
+  } else {
+    assertPositiveInt(input.priceCents, 'El precio debe ser mayor a cero');
+    if (input.priceCents > MAX_PRICE_CENTS) throw new Error('El precio es demasiado alto');
+  }
+  return runRw(db, ['products', 'stockMoves'], async (tx) => {
     const store = tx.objectStore('products');
     const existing: Product | undefined = input.id ? await store.get(input.id) : undefined;
     const all: Product[] = await store.getAll();
-    if (all.some((p) => p.id !== existing?.id && p.name === name && (p.quality ?? '') === (quality ?? ''))) {
-      throw abortWith(tx, 'Ya existe esa variedad con esa calidad');
+
+    // Los límites de texto y la unicidad se exigen solo al CREAR o al CAMBIAR un campo de clasificación: los datos
+    // anteriores (que pudieron guardarse con reglas más flexibles) no impiden editar el precio u ocultar el producto.
+    const fieldsIn = [
+      ['name', input.name, 'Variedad'],
+      ['origin', input.origin, 'Procedencia'],
+      ['quality', input.quality, 'Calidad'],
+      ['caliber', input.caliber, 'Calibre'],
+    ] as const;
+    const unchanged = (f: (typeof fieldsIn)[number][0], raw: string | undefined) =>
+      !!existing && cleanClassValue(raw) === (existing[f] ?? '');
+    for (const [f, raw, label] of fieldsIn) {
+      if (unchanged(f, raw)) continue;
+      const e = classValueError(raw, label);
+      if (e) throw abortWith(tx, e);
+    }
+    // Misma función que usa la vista previa del formulario: lo que se muestra es lo que se guarda.
+    const { name, origin, quality, caliber } = canonicalizeClass(all, input, existing);
+    if (!name) throw abortWith(tx, 'El nombre de la variedad es obligatorio');
+    const candidate = { name, origin, quality, caliber, unit: input.unit };
+    const changedClass = !existing || classificationKey(existing) !== classificationKey(candidate);
+    if (changedClass) {
+      const dup = all.find((p) => p.id !== existing?.id && classificationKey(p) === classificationKey(candidate));
+      if (dup) throw abortWith(tx, `Ya existe esa clasificación: ${productLabel(dup)}`);
+    }
+    if (existing && existing.unit !== input.unit) {
+      const moves: number = await tx.objectStore('stockMoves').index('byProduct').count(existing.id);
+      if (moves > 0 || existing.physicalMilli !== 0 || existing.reservedMilli !== 0) {
+        throw abortWith(tx, 'No se puede cambiar la unidad de un producto que ya tiene movimientos');
+      }
+    }
+    // Bitácora: si cambió cómo se escribe la clasificación de un producto que ya existía, queda el antes y el después.
+    const edits = [...(existing?.classEdits ?? [])];
+    if (existing) {
+      const textChanged = (['name', 'origin', 'quality', 'caliber'] as const).some(
+        (f) => (existing[f] ?? '') !== ({ name, origin, quality, caliber }[f] ?? ''),
+      );
+      if (textChanged) edits.push({ at: now(), before: classificationOf(existing), after: classificationOf({ name, origin, quality, caliber }) });
     }
     const product: Product = {
       id: existing?.id ?? input.id ?? newId(),
       name,
       ...(quality ? { quality } : {}),
+      ...(origin ? { origin } : {}),
+      ...(caliber ? { caliber } : {}),
       unit: input.unit,
       priceCents: input.priceCents,
       active: input.active,
@@ -262,15 +397,28 @@ export async function saveProduct(db: DB, input: ProductInput): Promise<Product>
       physicalMilli: existing?.physicalMilli ?? 0,
       reservedMilli: existing?.reservedMilli ?? 0,
       updatedAt: now(),
+      ...(edits.length ? { classEdits: edits } : {}),
     };
     await store.put(product);
     return product;
   });
 }
 
+/** Muestra u oculta un producto en la caja y en la recepción (no toca precio ni clasificación). */
+export async function setProductActive(db: DB, productId: string, active: boolean): Promise<Product> {
+  return runRw(db, ['products'], async (tx) => {
+    const p: Product | undefined = await tx.objectStore('products').get(productId);
+    if (!p) throw abortWith(tx, 'Variedad no encontrada');
+    const updated = { ...p, active, updatedAt: now() };
+    await tx.objectStore('products').put(updated);
+    return updated;
+  });
+}
+
 /** Cambia solo el precio (desde la caja). Persistente para las siguientes ventas. */
 export async function setPrice(db: DB, productId: string, priceCents: number): Promise<Product> {
   assertPositiveInt(priceCents, 'El precio debe ser mayor a cero');
+  if (priceCents > MAX_PRICE_CENTS) throw new Error('El precio es demasiado alto');
   return runRw(db, ['products'], async (tx) => {
     const p: Product | undefined = await tx.objectStore('products').get(productId);
     if (!p) throw abortWith(tx, 'Variedad no encontrada');
@@ -282,7 +430,7 @@ export async function setPrice(db: DB, productId: string, priceCents: number): P
 
 // ---------- Inventario ----------
 
-async function moveStock(
+export async function moveStock(
   tx: AnyTx,
   productId: string,
   type: StockMoveType,
@@ -291,19 +439,25 @@ async function moveStock(
   note: string,
   at: string,
   saleId?: string,
+  receptionId?: string,
+  moveId?: string,
+  authorizedNegativeAfterMilli?: number,
 ): Promise<Product | undefined> {
   const store = tx.objectStore('products');
   const p: Product | undefined = await store.get(productId);
   if (!p) return undefined; // variedad borrada: la venta sigue siendo válida
-  const updated: Product = {
-    ...p,
-    physicalMilli: p.physicalMilli + deltaMilli,
-    reservedMilli: p.reservedMilli + reservedDeltaMilli,
-    updatedAt: at,
-  };
+  const physical = p.physicalMilli + deltaMilli;
+  const reserved = p.reservedMilli + reservedDeltaMilli;
+  if (
+    !Number.isSafeInteger(physical) || !Number.isSafeInteger(reserved) ||
+    Math.abs(physical) > MAX_STOCK_MILLI || Math.abs(reserved) > MAX_STOCK_MILLI
+  ) {
+    throw new Error('El inventario de esta variedad excedería el máximo permitido');
+  }
+  const updated: Product = { ...p, physicalMilli: physical, reservedMilli: reserved, updatedAt: at };
   await store.put(updated);
   const move: StockMove = {
-    id: newId(),
+    id: moveId ?? newId(),
     productId,
     createdAt: at,
     type,
@@ -311,16 +465,41 @@ async function moveStock(
     reservedDeltaMilli,
     note,
     ...(saleId ? { saleId } : {}),
+    ...(receptionId ? { receptionId } : {}),
+    ...(authorizedNegativeAfterMilli !== undefined ? { authorizedNegativeAfterMilli } : {}),
   };
-  await tx.objectStore('stockMoves').put(move);
+  await tx.objectStore('stockMoves').add(move); // add: un id repetido choca y revierte la transacción
   return updated;
 }
 
 /**
+ * ¿Una autorización cubre este disponible resultante? `true` = cualquiera; un número = piso autorizado (el disponible
+ * que se le MOSTRÓ a la persona): si entre el aviso y el reintento otra operación empeoró el resultado, ya no cubre.
+ */
+export function negativeAuthorized(allow: boolean | number, availableAfterMilli: number): boolean {
+  return allow === true || (typeof allow === 'number' && availableAfterMilli >= allow);
+}
+
+/** Se registra a mano una entrada de una clasificación que acaba de recibirse en Recepción: posible doble conteo. */
+export class ManualEntryWarningError extends Error {
+  constructor(public receptions: Reception[]) {
+    super(
+      'Hace poco se registró en Recepción mercancía de esta misma clasificación (' +
+        receptions.map((r) => `R-${r.folio}`).join(', ') +
+        '). Si esta entrada es la misma mercancía, se contaría dos veces.',
+    );
+  }
+}
+
+const DAY_MS = 24 * 3600 * 1000;
+
+/**
  * Movimiento manual de inventario.
- *  - entrada: llega mercancía (+qty físico)
+ *  - entrada: existencia inicial o mercancía que no viene de un proveedor (+qty físico). Lo que llega de un proveedor
+ *    se registra en Recepción; si hay una recepción reciente de la misma clasificación se pide reconocer el aviso.
  *  - merma: producto echado a perder (−qty físico)
  *  - ajuste: conteo físico; `qtyMilli` es la existencia física REAL contada.
+ * `allowNegative`: false = pedir autorización; true = autorizar cualquier resultado; número = piso autorizado.
  */
 export async function addStockMove(
   db: DB,
@@ -328,28 +507,43 @@ export async function addStockMove(
   type: 'entrada' | 'merma' | 'ajuste',
   qtyMilli: number,
   note = '',
-  allowNegative = false,
+  allowNegative: boolean | number = false,
+  acknowledge = false,
 ): Promise<Product> {
+  const text = checkedText(note, 'Motivo', MAX_REASON);
   // Mermas y ajustes son correcciones: siempre llevan motivo.
-  if (type !== 'entrada' && !note.trim()) throw new Error('Indica el motivo del movimiento');
+  if (type !== 'entrada' && !text) throw new Error('Indica el motivo del movimiento');
   if (type === 'ajuste') {
     if (!Number.isSafeInteger(qtyMilli) || qtyMilli < 0) throw new Error('Existencia inválida');
   } else {
     assertPositiveInt(qtyMilli, 'La cantidad debe ser mayor a cero');
   }
-  return runRw(db, ['products', 'stockMoves'], async (tx) => {
+  if (qtyMilli > MAX_QTY_MILLI) throw new Error('La cantidad excede el máximo permitido');
+  return runRw(db, ['products', 'stockMoves', 'receptions'], async (tx) => {
     const p: Product | undefined = await tx.objectStore('products').get(productId);
     if (!p) throw abortWith(tx, 'Variedad no encontrada');
     const delta =
       type === 'entrada' ? qtyMilli : type === 'merma' ? -qtyMilli : qtyMilli - p.physicalMilli;
     const availableAfter = p.physicalMilli + delta - p.reservedMilli;
-    if (delta < 0 && availableAfter < 0 && !allowNegative) {
-      throw abortWith(
-        tx,
-        `Quedaría disponible negativo (${availableAfter / 1000}): hay ${p.reservedMilli / 1000} reservados en vales. Se requiere autorización.`,
-      );
+    let authorized: number | undefined;
+    if (delta < 0 && availableAfter < 0) {
+      if (!negativeAuthorized(allowNegative, availableAfter)) {
+        abortWith(tx, '');
+        throw new NegativeStockError(availableAfter, productLabel(p), p.reservedMilli);
+      }
+      authorized = availableAfter;
     }
-    const updated = await moveStock(tx, productId, type, delta, 0, note.trim(), now());
+    if (type === 'entrada' && p.unit === 'kg' && !acknowledge) {
+      const recs: Reception[] = await tx.objectStore('receptions').index('byProduct').getAll(productId);
+      const recent = recs.filter(
+        (r) => r.status === 'confirmada' && !!r.confirmedAt && Date.now() - Date.parse(r.confirmedAt) <= DAY_MS,
+      );
+      if (recent.length > 0) {
+        abortWith(tx, '');
+        throw new ManualEntryWarningError(recent);
+      }
+    }
+    const updated = await moveStock(tx, productId, type, delta, 0, text, now(), undefined, undefined, undefined, authorized);
     return updated!;
   });
 }
@@ -385,7 +579,7 @@ export async function getCurrentShift(db: DB): Promise<Shift | undefined> {
 }
 
 export async function openShift(db: DB, openingCashCents: number): Promise<Shift> {
-  if (!Number.isSafeInteger(openingCashCents) || openingCashCents < 0) {
+  if (!Number.isSafeInteger(openingCashCents) || openingCashCents < 0 || openingCashCents > MAX_MONEY_CENTS) {
     throw new Error('Fondo inicial inválido');
   }
   return runRw(db, ['meta', 'shifts'], async (tx) => {
@@ -398,7 +592,7 @@ export async function openShift(db: DB, openingCashCents: number): Promise<Shift
 }
 
 export async function setOpeningCash(db: DB, shiftId: string, cents: number): Promise<void> {
-  if (!Number.isSafeInteger(cents) || cents < 0) throw new Error('Fondo inicial inválido');
+  if (!Number.isSafeInteger(cents) || cents < 0 || cents > MAX_MONEY_CENTS) throw new Error('Fondo inicial inválido');
   return runRw(db, ['shifts'], async (tx) => {
     const s: Shift | undefined = await tx.objectStore('shifts').get(shiftId);
     if (!s || s.closedAt) throw abortWith(tx, 'El turno no está abierto');
@@ -418,7 +612,7 @@ export async function listCashMovements(db: DB, shiftId: string): Promise<CashMo
 
 /** Cierra el turno actual. El efectivo esperado se calcula aquí, no lo dicta la UI. */
 export async function closeShift(db: DB, countedCashCents: number): Promise<Shift> {
-  if (!Number.isSafeInteger(countedCashCents) || countedCashCents < 0) {
+  if (!Number.isSafeInteger(countedCashCents) || countedCashCents < 0 || countedCashCents > MAX_MONEY_CENTS) {
     throw new Error('Efectivo contado inválido');
   }
   return runRw(db, ['meta', 'shifts', 'sales', 'cashMovements'], async (tx) => {
@@ -451,7 +645,8 @@ export async function listClosedShifts(db: DB, limit = 30): Promise<Shift[]> {
 /** Salida de efectivo (gasto, retiro, pago a proveedor) con su concepto. */
 export async function addCashOut(db: DB, amountCents: number, concept: string): Promise<CashMovement> {
   assertPositiveInt(amountCents, 'El monto debe ser mayor a cero');
-  const c = concept.trim();
+  if (amountCents > MAX_MONEY_CENTS) throw new Error('El monto es demasiado grande');
+  const c = checkedText(concept, 'Concepto', MAX_CONCEPT);
   if (!c) throw new Error('Indica el concepto de la salida');
   return runRw(db, ['meta', 'shifts', 'cashMovements'], async (tx) => {
     const at = now();
@@ -498,12 +693,28 @@ export class DuplicateSaleError extends Error {
  * Si ya existe una venta con el mismo id lanza DuplicateSaleError sin tocar nada.
  */
 export async function createSale(db: DB, input: NewSaleInput): Promise<Sale> {
+  // Límites de seguridad numérica y de negocio (antes de calcular nada).
+  for (const l of input.cart) {
+    if (!Number.isSafeInteger(l.qtyMilli) || l.qtyMilli <= 0 || l.qtyMilli > MAX_QTY_MILLI) {
+      throw new Error('Cantidad inválida o excesiva');
+    }
+    if (!Number.isSafeInteger(l.unitPriceCents) || l.unitPriceCents < 1 || l.unitPriceCents > MAX_PRICE_CENTS) {
+      throw new Error('Precio inválido: captura un precio mayor a cero');
+    }
+  }
   const items = toSaleItems(input.cart);
   const totalCents = items.reduce((s, i) => s + i.totalCents, 0);
+  if (!Number.isSafeInteger(totalCents) || totalCents > MAX_MONEY_CENTS) throw new Error('El importe es demasiado grande');
+  if (
+    input.paymentMethod === 'efectivo' &&
+    (!Number.isSafeInteger(input.receivedCents) || input.receivedCents > MAX_MONEY_CENTS)
+  ) {
+    throw new Error('El efectivo recibido es demasiado grande');
+  }
   const received = input.paymentMethod === 'efectivo' ? input.receivedCents : totalCents;
   const pay = checkPayment(totalCents, input.paymentMethod, received);
   if (!pay.ok) throw new Error(pay.error);
-  const customerName = input.customerName?.trim() || undefined;
+  const customerName = checkedText(input.customerName, 'Cliente', MAX_NAME) || undefined;
 
   const at = input.at ?? new Date();
   const atIso = at.toISOString();
@@ -520,8 +731,10 @@ export async function createSale(db: DB, input: NewSaleInput): Promise<Sale> {
       needed.set(it.productId, { name: it.name, qty: (cur?.qty ?? 0) + it.qtyMilli });
     }
     const shortages: Shortage[] = [];
+    const productsById = new Map<string, Product>();
     for (const [productId, n] of needed) {
       const p: Product | undefined = await tx.objectStore('products').get(productId);
+      if (p) productsById.set(productId, p);
       if (p && availableMilli(p) - n.qty < 0) {
         shortages.push({ productId, name: n.name, availableMilli: availableMilli(p), neededMilli: n.qty });
       }
@@ -538,13 +751,18 @@ export async function createSale(db: DB, input: NewSaleInput): Promise<Sale> {
       valeFolio = (await meta.get('nextValeFolio'))?.value ?? 1;
       await meta.put({ key: 'nextValeFolio', value: valeFolio! + 1 });
     }
+    // La foto de la clasificación se toma del producto LEÍDO EN ESTA transacción (no de lo que mande la pantalla).
+    const sealedItems = items.map((it) => {
+      const p = productsById.get(it.productId);
+      return p ? { ...it, cls: classificationOf(p) } : it;
+    });
     const sale: Sale = {
       id: saleId,
       folio,
       createdAt: atIso,
       day: localDay(at),
       shiftId: shift.id,
-      items,
+      items: sealedItems,
       totalCents,
       paymentMethod: input.paymentMethod,
       receivedCents: received,
@@ -614,7 +832,7 @@ export async function deliverVale(db: DB, saleId: string): Promise<Sale> {
 
 /** Anula una venta del turno abierto y revierte su efecto en inventario. */
 export async function voidSale(db: DB, saleId: string, reason: string): Promise<Sale> {
-  const r = reason.trim();
+  const r = checkedText(reason, 'Motivo', MAX_REASON);
   if (!r) throw new Error('Indica el motivo de la anulación');
   return runRw(db, ['sales', 'shifts', 'products', 'stockMoves'], async (tx) => {
     const sale: Sale | undefined = await tx.objectStore('sales').get(saleId);
@@ -648,7 +866,7 @@ export async function cancelVale(
   reason: string,
   refundMethod: RefundMethod,
 ): Promise<Sale> {
-  const r = reason.trim();
+  const r = checkedText(reason, 'Motivo', MAX_REASON);
   if (!r) throw new Error('Indica el motivo de la cancelación');
   if (!['efectivo', 'transferencia', 'ninguna'].includes(refundMethod)) {
     throw new Error('Indica qué se hizo con el dinero');
@@ -703,135 +921,45 @@ export async function loadCartDraft(db: DB): Promise<CartLine[]> {
 
 // ---------- Respaldo ----------
 
-const DATA_STORES = ['products', 'sales', 'shifts', 'cashMovements', 'stockMoves', 'meta'] as const;
+const DATA_STORES = ['products', 'sales', 'shifts', 'cashMovements', 'stockMoves', 'receptions', 'freights', 'meta'] as const;
 
 export async function exportBackup(db: DB): Promise<Backup> {
   const tx = db.transaction([...DATA_STORES], 'readonly');
-  const [products, sales, shifts, cashMovements, stockMoves, folio, valeFolio] = await Promise.all([
+  const [products, sales, shifts, cashMovements, stockMoves, receptions, freights, folio, valeFolio, receptionFolio, settings] = await Promise.all([
     tx.objectStore('products').getAll(),
     tx.objectStore('sales').getAll(),
     tx.objectStore('shifts').getAll(),
     tx.objectStore('cashMovements').getAll(),
     tx.objectStore('stockMoves').getAll(),
+    tx.objectStore('receptions').getAll(),
+    tx.objectStore('freights').getAll(),
     tx.objectStore('meta').get('nextFolio'),
     tx.objectStore('meta').get('nextValeFolio'),
+    tx.objectStore('meta').get('nextReceptionFolio'),
+    tx.objectStore('meta').get('freightSettings'),
   ]);
   await tx.done;
+  const stored = settings?.value as FreightSettings | undefined;
   return {
     app: 'sistema-venta-limones',
-    version: 1,
+    version: 3,
     exportedAt: now(),
     products,
     sales,
     shifts,
     cashMovements,
     stockMoves,
+    receptions,
+    freights,
+    ...(stored && validateFreightSettings(stored).length === 0 ? { freightSettings: stored } : {}),
     nextFolio: (folio?.value as number | undefined) ?? 1,
     nextValeFolio: (valeFolio?.value as number | undefined) ?? 1,
+    nextReceptionFolio: (receptionFolio?.value as number | undefined) ?? 1,
   };
 }
 
-// ---- Validación estricta de la forma de un respaldo (antes de tocar ningún dato) ----
-
-type Rec = Record<string, unknown>;
-const isRec = (x: unknown): x is Rec => typeof x === 'object' && x !== null && !Array.isArray(x);
-const isInt = (x: unknown, min = Number.MIN_SAFE_INTEGER): x is number =>
-  typeof x === 'number' && Number.isSafeInteger(x) && x >= min;
-const isStr = (x: unknown): x is string => typeof x === 'string' && x.length > 0;
-const isOptStr = (x: unknown) => x === undefined || typeof x === 'string';
-const oneOf = (x: unknown, set: readonly string[]) => typeof x === 'string' && set.includes(x);
-
-const UNITS = ['kg', 'pieza', 'caja', 'arpilla'];
-const METHODS = ['efectivo', 'transferencia', 'tarjeta'];
-const DELIVERY = ['inmediata', 'pendiente', 'entregado', 'cancelado'];
-const MOVE_TYPES = ['entrada', 'merma', 'ajuste', 'venta', 'reserva', 'entrega_vale', 'anulacion'];
-
-function checkShape(label: string, i: number, ok: boolean, detail: string) {
-  if (!ok) throw new Error(`Respaldo dañado: ${label} nº ${i + 1} (${detail})`);
-}
-
-export function validateBackup(data: unknown): Backup {
-  const b = data as Partial<Backup> | null;
-  if (!b || b.app !== 'sistema-venta-limones' || b.version !== 1) {
-    throw new Error('El archivo no es un respaldo válido de esta app');
-  }
-  for (const k of ['products', 'sales', 'shifts', 'cashMovements', 'stockMoves'] as const) {
-    if (!Array.isArray(b[k])) throw new Error(`Respaldo incompleto: falta ${k}`);
-  }
-  if (!isInt(b.nextFolio, 1)) throw new Error('Respaldo con folio inválido');
-
-  const uniq = (label: string, ids: string[]) => {
-    if (new Set(ids).size !== ids.length) throw new Error(`Respaldo dañado: ${label} con id repetido`);
-  };
-
-  b.products!.forEach((p: unknown, i) => {
-    const r = p as Rec;
-    checkShape('variedad', i, isRec(p) && isStr(r.id) && isStr(r.name) && isOptStr(r.quality) &&
-      oneOf(r.unit, UNITS) && isInt(r.priceCents, 1) && typeof r.active === 'boolean' &&
-      isInt(r.sort) && isInt(r.physicalMilli) && isInt(r.reservedMilli) && isStr(r.updatedAt),
-      'campos faltantes o inválidos');
-  });
-  b.shifts!.forEach((x: unknown, i) => {
-    const r = x as Rec;
-    checkShape('turno', i, isRec(x) && isStr(r.id) && isStr(r.openedAt) && isInt(r.openingCashCents, 0) &&
-      isOptStr(r.closedAt), 'campos faltantes o inválidos');
-  });
-  b.cashMovements!.forEach((x: unknown, i) => {
-    const r = x as Rec;
-    checkShape('movimiento de caja', i, isRec(x) && isStr(r.id) && isStr(r.shiftId) && isStr(r.createdAt) &&
-      oneOf(r.type, ['salida', 'devolucion']) && isInt(r.amountCents, 1) && typeof r.concept === 'string',
-      'campos faltantes o inválidos');
-  });
-  b.stockMoves!.forEach((x: unknown, i) => {
-    const r = x as Rec;
-    checkShape('movimiento de inventario', i, isRec(x) && isStr(r.id) && isStr(r.productId) &&
-      isStr(r.createdAt) && oneOf(r.type, MOVE_TYPES) && isInt(r.deltaMilli) &&
-      isInt(r.reservedDeltaMilli) && typeof r.note === 'string', 'campos faltantes o inválidos');
-  });
-  const ids = new Set<string>();
-  let maxFolio = 0;
-  let maxVale = 0;
-  const valeFolios = new Set<number>();
-  b.sales!.forEach((x: unknown, i) => {
-    const r = x as Rec;
-    const ok =
-      isRec(x) && isStr(r.id) && isInt(r.folio, 1) && isStr(r.createdAt) &&
-      typeof r.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.day) && isStr(r.shiftId) &&
-      Array.isArray(r.items) && r.items.length > 0 &&
-      r.items.every((it: unknown) => {
-        const t = it as Rec;
-        return isRec(it) && isStr(t.productId) && isStr(t.name) && oneOf(t.unit, UNITS) &&
-          isInt(t.qtyMilli, 1) && isInt(t.unitPriceCents, 1) && isInt(t.totalCents, 0);
-      }) &&
-      isInt(r.totalCents, 0) && oneOf(r.paymentMethod, METHODS) && isInt(r.receivedCents, 0) &&
-      isInt(r.changeCents, 0) && oneOf(r.status, ['completada', 'anulada']) &&
-      oneOf(r.delivery, DELIVERY) && (r.valeFolio === undefined || isInt(r.valeFolio, 1));
-    checkShape('venta', i, ok, 'campos faltantes o inválidos');
-    const sale = x as { id: string; folio: number; valeFolio?: number };
-    if (ids.has(sale.id)) throw new Error('Respaldo con ventas duplicadas');
-    ids.add(sale.id);
-    maxFolio = Math.max(maxFolio, sale.folio);
-    if (sale.valeFolio !== undefined) {
-      if (valeFolios.has(sale.valeFolio)) throw new Error('Respaldo con folios de vale repetidos');
-      valeFolios.add(sale.valeFolio);
-      maxVale = Math.max(maxVale, sale.valeFolio);
-    }
-  });
-  uniq('variedades', (b.products as Array<{ id: string }>).map((p) => p.id));
-  uniq('turnos', (b.shifts as Array<{ id: string }>).map((p) => p.id));
-  uniq('movimientos de caja', (b.cashMovements as Array<{ id: string }>).map((p) => p.id));
-  uniq('movimientos de inventario', (b.stockMoves as Array<{ id: string }>).map((p) => p.id));
-
-  if ((b.nextFolio as number) <= maxFolio) {
-    throw new Error('Respaldo inconsistente: el folio siguiente ya fue usado');
-  }
-  const nextVale = b.nextValeFolio === undefined ? maxVale + 1 : b.nextValeFolio;
-  if (!isInt(nextVale, 1)) throw new Error('Respaldo con folio de vale inválido');
-  if (nextVale <= maxVale) {
-    throw new Error('Respaldo inconsistente: el folio de vale siguiente ya fue usado');
-  }
-  return { ...(b as Backup), nextValeFolio: nextVale };
-}
+// La validación y el saneamiento viven en ./backup (puros, sin IndexedDB). Se reexporta para no cambiar imports.
+export { validateBackup };
 
 /**
  * Reemplaza TODOS los datos por los del respaldo, en una sola transacción.
@@ -840,14 +968,28 @@ export function validateBackup(data: unknown): Backup {
 export async function importBackup(db: DB, data: unknown): Promise<void> {
   const b = validateBackup(data);
   return runRw(db, [...DATA_STORES], async (tx) => {
+    // Los folios NUNCA bajan: si se restaura un respaldo más viejo, los números que ya se emitieron (tickets, vales,
+    // recepciones) no se repiten. Puede haber huecos en la numeración; no hay duplicados.
+    const meta = tx.objectStore('meta');
+    const current = async (key: string): Promise<number> => {
+      const v = (await meta.get(key))?.value;
+      return Number.isSafeInteger(v) && (v as number) > 0 ? (v as number) : 1;
+    };
+    const nextFolio = Math.max(b.nextFolio, await current('nextFolio'));
+    const nextValeFolio = Math.max(b.nextValeFolio, await current('nextValeFolio'));
+    const nextReceptionFolio = Math.max(b.nextReceptionFolio, await current('nextReceptionFolio'));
     for (const s of DATA_STORES) await tx.objectStore(s).clear();
     for (const p of b.products) await tx.objectStore('products').put(p);
     for (const s of b.sales) await tx.objectStore('sales').put(s);
     for (const s of b.shifts) await tx.objectStore('shifts').put(s);
     for (const m of b.cashMovements) await tx.objectStore('cashMovements').put(m);
     for (const m of b.stockMoves) await tx.objectStore('stockMoves').put(m);
-    await tx.objectStore('meta').put({ key: 'nextFolio', value: b.nextFolio });
-    await tx.objectStore('meta').put({ key: 'nextValeFolio', value: b.nextValeFolio });
+    for (const r of b.receptions) await tx.objectStore('receptions').put(r);
+    for (const f of b.freights) await tx.objectStore('freights').put(f);
+    if (b.freightSettings) await tx.objectStore('meta').put({ key: 'freightSettings', value: b.freightSettings });
+    await tx.objectStore('meta').put({ key: 'nextFolio', value: nextFolio });
+    await tx.objectStore('meta').put({ key: 'nextValeFolio', value: nextValeFolio });
+    await tx.objectStore('meta').put({ key: 'nextReceptionFolio', value: nextReceptionFolio });
     const open = b.shifts
       .filter((s) => !s.closedAt)
       .sort((x, y) => y.openedAt.localeCompare(x.openedAt))[0];

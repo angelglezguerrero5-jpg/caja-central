@@ -39,7 +39,7 @@ export async function openApp(page: Page, opts: { seed?: boolean } = {}) {
   if (opts.seed ?? true) await seedVarieties(page);
 }
 
-export const tab = (page: Page, name: 'caja' | 'vales' | 'inventario' | 'corte' | 'mas') =>
+export const tab = (page: Page, name: 'caja' | 'vales' | 'recepcion' | 'inventario' | 'corte' | 'mas') =>
   page.getByTestId(`tab-${name}`).click();
 
 /** Venta en efectivo con billetes: devuelve tras ver el toast de guardado. */
@@ -66,5 +66,5 @@ export async function addStock(page: Page, productIndex: number, kg: string) {
   await row.getByTestId('move-entrada').click();
   await row.getByTestId('move-qty').fill(kg);
   await row.getByTestId('move-save').click();
-  await expect(page.getByTestId('toast')).toContainText('Entrada registrada');
+  await expect(page.getByTestId('toast')).toContainText('Entrada manual registrada');
 }

@@ -134,6 +134,7 @@ export function Corte() {
       <h3>Fondo inicial</h3>
       <div class="inline-form">
         <input
+          aria-label="Fondo inicial correcto, en pesos"
           placeholder={`Actual: ${formatMoney(shift.openingCashCents)}`}
           data-testid="fund-input"
           inputMode="decimal"
@@ -156,6 +157,7 @@ export function Corte() {
       <h3>Salida de efectivo</h3>
       <div class="inline-form">
         <input
+          aria-label="Monto de la salida, en pesos"
           placeholder="Monto"
           data-testid="out-amount"
           inputMode="decimal"
@@ -163,7 +165,9 @@ export function Corte() {
           onInput={(e) => setOutAmount((e.target as HTMLInputElement).value)}
         />
         <input
+          aria-label="Concepto de la salida"
           placeholder="Concepto (bolsas, comida…)"
+          maxLength={120}
           data-testid="out-concept"
           value={outConcept}
           onInput={(e) => setOutConcept((e.target as HTMLInputElement).value)}

@@ -1,7 +1,7 @@
 {
   "name": "sistema-venta-limones",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.3.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,11 +9,13 @@
     "preview": "vite preview --port 4173 --strictPort",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:e2e": "playwright test",
+    "test:e2e": "node scripts/run-e2e.mjs",
     "icons": "node scripts/gen-icons.mjs",
     "verify:pwa": "node scripts/verify-pwa.mjs",
+    "verify:deploy": "node scripts/verify-deploy.mjs",
     "serve:android": "vite preview --port 4173 --strictPort --host 127.0.0.1",
-    "check": "npm run typecheck && npm test && npm run build && npm run verify:pwa && npm run test:e2e"
+    "check": "npm run typecheck && npm test && npm run build && npm run verify:pwa && npm run test:e2e",
+    "test:e2e:raw": "playwright test"
   },
   "dependencies": {
     "idb": "^8.0.4",

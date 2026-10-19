@@ -1,10 +1,9 @@
+import { classificationOf, productLabel } from './classification';
 import { lineTotalCents } from './money';
 import type { CartLine, PaymentMethod, Product, SaleItem } from './types';
 
-/** Nombre mostrable: variedad + calidad opcional. */
-export function productLabel(p: Pick<Product, 'name' | 'quality'>): string {
-  return p.quality ? `${p.name} · ${p.quality}` : p.name;
-}
+/** Nombre mostrable: variedad · procedencia · calidad · calibre (lo que exista). */
+export { productLabel };
 
 export function addLine(cart: CartLine[], product: Product, qtyMilli: number): CartLine[] {
   if (!Number.isSafeInteger(qtyMilli) || qtyMilli <= 0) {
@@ -25,6 +24,7 @@ export function addLine(cart: CartLine[], product: Product, qtyMilli: number): C
       unit: product.unit,
       qtyMilli,
       unitPriceCents: product.priceCents,
+      cls: classificationOf(product),
     },
   ];
 }

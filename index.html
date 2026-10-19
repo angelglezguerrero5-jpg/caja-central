@@ -2,16 +2,28 @@
 <html lang="es-MX">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!-- viewport-fit=cover: la app usa toda la pantalla y respeta las zonas seguras (muesca, isla dinámica, barra de inicio) con env().
+         interactive-widget=resizes-content: Chrome de Android encoge la ventana con el teclado; Safari de iPhone lo ignora y por eso
+         src/ui/keyboard.ts también lee window.visualViewport. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'" />
     <meta name="theme-color" content="#2f7d32" />
+    <meta name="color-scheme" content="light" />
     <meta name="description" content="Caja rápida offline para venta de limones" />
+    <!-- iPhone / iPad (Safari, pantalla de inicio): nombre bajo el ícono, modo app y barra de estado sobre el encabezado verde. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Limones" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- Sin esto iOS convierte kilos y precios (p. ej. 5551234567) en enlaces de teléfono. -->
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icons/icon-192.png" type="image/png" />
-    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
     <title>Venta de Limones</title>
   </head>
   <body>
-    <div id="app"><p style="padding:16px;font-family:sans-serif">Cargando caja…</p></div>
+    <div id="app"><p class="loading">Cargando caja…</p></div>
     <noscript>Esta app necesita JavaScript.</noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>

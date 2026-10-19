@@ -21,10 +21,16 @@ export function useApp(): AppCtx {
 export function errMsg(e: unknown): string {
   const name = (e as { name?: string } | null)?.name;
   if (name === 'QuotaExceededError') {
-    return 'Almacenamiento lleno: la venta NO se guardó. Exporta un respaldo y libera espacio.';
+    return 'Almacenamiento lleno: el registro NO se guardó. Exporta un respaldo y libera espacio.';
   }
   if (name === 'InvalidStateError' || name === 'UnknownError') {
     return 'No se pudo escribir en la base de datos del teléfono. Cierra y vuelve a abrir la app.';
+  }
+  if (name === 'VersionError') {
+    return (
+      'Los datos del teléfono son de una versión MÁS NUEVA que esta copia de la app. No se borró nada: ' +
+      'cierra la app por completo y ábrela con internet para que se actualice.'
+    );
   }
   return e instanceof Error ? e.message : String(e);
 }
