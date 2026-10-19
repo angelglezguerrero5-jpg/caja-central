@@ -154,7 +154,7 @@ describe('verify-deploy: cada defecto se marca FAIL y el código de salida es 1'
     {
       name: 'apple-touch-icon con transparencia (se vería con fondo negro)',
       prepare: (d) => writeFileSync(join(d, 'icons', 'apple-touch-icon.png'), png(180, 6)),
-      expected: /^FAIL\s+apple-touch-icon con canal alfa \(colorType 6\)/m,
+      expected: /^FAIL\s+apple-touch-icon con transparencia \(colorType 6\)/m,
     },
     {
       name: 'el manifest bloquea la orientación',

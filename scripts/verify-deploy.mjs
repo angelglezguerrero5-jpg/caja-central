@@ -24,7 +24,14 @@ const check = (cond, okMsg, failMsg, level = 'FAIL') => (cond ? pass(okMsg) : no
 function pngInfo(buf) {
   const sig = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
   if (buf.length < 29 || !buf.subarray(0, 8).equals(sig) || buf.toString('ascii', 12, 16) !== 'IHDR') return null;
-  return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20), colorType: buf[25] };
+  let hasTrns = false; // bloque de transparencia (en PNG de paleta o de grises)
+  for (let i = 8; i + 8 <= buf.length; ) {
+    const type = buf.toString('ascii', i + 4, i + 8);
+    if (type === 'tRNS') hasTrns = true;
+    if (type === 'IDAT' || type === 'IEND') break;
+    i += 12 + buf.readUInt32BE(i);
+  }
+  return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20), colorType: buf[25], hasTrns };
 }
 
 const LOCAL = new Set(['localhost', '127.0.0.1', '[::1]']);
@@ -120,7 +127,9 @@ async function main() {
     const r = await get(apple);
     const info = r.error ? null : pngInfo(r.body);
     check(!r.error && r.res.status === 200 && info?.width === 180 && info?.height === 180, `apple-touch-icon (${apple}) mide 180x180`, `apple-touch-icon (${apple}) no se pudo leer o no mide 180x180`);
-    check(info?.colorType === 2, 'apple-touch-icon sin transparencia (iOS rellenaría de negro)', `apple-touch-icon con canal alfa (colorType ${info?.colorType}): en iPhone se vería con fondo negro`);
+    // Opaco = sin canal alfa (tipos 4 y 6) y sin bloque tRNS. Un CDN puede recomprimir el PNG a paleta (tipo 3): sigue siendo opaco.
+    const opaque = !!info && info.colorType !== 4 && info.colorType !== 6 && !info.hasTrns;
+    check(opaque, 'apple-touch-icon sin transparencia (iOS rellenaría de negro)', `apple-touch-icon con transparencia (colorType ${info?.colorType}${info?.hasTrns ? ', tRNS' : ''}): en iPhone se vería con fondo negro`);
   }
 
   // ── Service worker ─────────────────────────────────────────────────────────────────────────────────────────────────
