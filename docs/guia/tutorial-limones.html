@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<title>Tutorial básico — Venta de Limones</title>
+<style>
+  @page { size: Letter; margin: 1.5cm 1.6cm; }
+  * { box-sizing: border-box; }
+  body { font: 11pt/1.4 "Helvetica Neue", Arial, "DejaVu Sans", sans-serif; color: #1c2b1d; margin: 0; }
+  h1 { font-size: 26pt; margin: 0 0 4pt; color: #1b5e20; }
+  h2 { font-size: 15pt; margin: 18pt 0 6pt; color: #1b5e20; border-bottom: 2px solid #2f7d32; padding-bottom: 3pt; break-after: avoid; }
+  h3 { font-size: 12pt; margin: 10pt 0 3pt; break-after: avoid; }
+  p { margin: 4pt 0; } ul, ol { margin: 4pt 0 4pt 16pt; padding: 0; } li { margin: 2pt 0; }
+  .sub { color: #4f5d50; font-size: 12pt; margin-bottom: 10pt; }
+  .box { background: #fff4d1; border: 1px solid #c9a400; border-radius: 6px; padding: 7pt 10pt; margin: 8pt 0; break-inside: avoid; }
+  .ok { background: #e8f3e8; border-color: #2f7d32; }
+  .row { display: grid; grid-template-columns: 1fr 5.4cm; gap: 14pt; align-items: start; margin: 6pt 0; break-inside: avoid; }
+  .row.two { grid-template-columns: 1fr 5.4cm 5.4cm; }
+  figure { margin: 0; text-align: center; }
+  figure img { width: 100%; border: 1px solid #aab8aa; border-radius: 8px; }
+  figcaption { font-size: 8.5pt; color: #4f5d50; margin-top: 2pt; }
+  table { border-collapse: collapse; width: 100%; margin: 6pt 0; font-size: 10pt; break-inside: avoid; }
+  th, td { border: 1px solid #b9c7b9; padding: 4pt 6pt; text-align: left; vertical-align: top; } th { background: #e8f3e8; }
+  code { background: #eef2ec; padding: 0 3pt; border-radius: 3px; font-size: 10pt; }
+  .small { font-size: 9pt; color: #4f5d50; }
+  .pb { }
+</style>
+</head>
+<body>
+
+<h1>Venta de Limones</h1>
+<p class="sub">Tutorial básico: qué hace la app, cómo se usa y qué te aporta</p>
+
+<div class="box ok">
+  <strong>En una frase:</strong> es una app para el teléfono que lleva la <strong>caja</strong>, el <strong>inventario</strong> y el
+  <strong>control de pesaje de cada flete</strong> (lo que pesó la mercancía al salir contra lo que pesó al llegar), sin papel y
+  con todo guardado en el propio teléfono.
+</div>
+
+<div class="box">
+  <strong>Estado:</strong> versión de <strong>prueba</strong>. Se probó mucho en simulación, pero <strong>todavía no se ha
+  comprobado en un teléfono real</strong>. Úsala solo con datos de prueba hasta confirmar que todo cuadra con tu forma de
+  trabajar. Las imágenes de este documento usan <strong>datos de ejemplo</strong> (no son de ningún negocio real).
+</div>
+
+<h2>Qué te aporta</h2>
+<ul>
+  <li><strong>Control por flete.</strong> Cada flete queda con folio, fecha, origen, destino, boleta y báscula. La app calcula sola
+    la <strong>diferencia en kilos y en porcentaje</strong> entre el peso de salida y el de llegada, y la compara con un rango que tú
+    defines. No te dice <em>por qué</em> hay diferencia; te muestra <em>cuánto</em> y cuándo se sale de lo normal.</li>
+  <li><strong>Caja y corte sin errores de cuenta.</strong> Total, cambio y corte del día (efectivo esperado contra el contado) se
+    calculan solos.</li>
+  <li><strong>Inventario real</strong> por variedad, calidad y calibre: lo que hay, lo que está apartado por vales y lo disponible.</li>
+  <li><strong>Vales pagados</strong> (el cliente paga hoy y recoge después) que reservan la mercancía sin cobrarla dos veces.</li>
+  <li><strong>Rastro de correcciones.</strong> Cambiar algo ya capturado pide un motivo y queda anotado; anular no borra nada.</li>
+  <li><strong>Pensada para funcionar sin internet</strong> y para sacar un respaldo con un toque.</li>
+</ul>
+
+<h2>1. Abrirla e instalarla</h2>
+<p>La app se abre desde una dirección web y se instala como una app más (con su ícono). Necesitas internet <strong>solo la primera vez</strong>.</p>
+<table>
+  <tr><th>Android (Chrome)</th><th>iPhone (Safari)</th></tr>
+  <tr>
+    <td><ol><li>Abre la dirección en <strong>Chrome</strong> y espera a que cargue la Caja.</li>
+      <li>Toca el menú <strong>⋮</strong> y elige <strong>Instalar app</strong>.</li>
+      <li>Abre la app desde el ícono <strong>Limones</strong>.</li></ol></td>
+    <td><ol><li>Abre la dirección en <strong>Safari</strong> (no en Chrome ni dentro de WhatsApp).</li>
+      <li>Toca <strong>Compartir</strong> (cuadro con flecha) y elige <strong>Añadir a pantalla de inicio</strong>.</li>
+      <li>Si aparece «Abrir como app web», déjalo encendido; toca <strong>Añadir</strong>.</li>
+      <li>Abre la app desde el ícono nuevo.</li></ol></td>
+  </tr>
+</table>
+<div class="box"><strong>Importante en iPhone:</strong> lo que captures dentro de Safari <strong>no aparece</strong> en la app instalada
+  (son almacenes distintos). Instálala <strong>antes</strong> de capturar datos. Para comprobar que usas la instalada: <em>Más → Estado de los datos</em>
+  debe decir «Modo: app instalada».</div>
+
+<h2 class="pb">2. El mapa: seis pestañas</h2>
+<div class="row">
+  <div>
+    <p>Abajo de la pantalla están siempre las seis secciones:</p>
+    <table>
+      <tr><th>Pestaña</th><th>Para qué sirve</th></tr>
+      <tr><td><strong>Caja</strong></td><td>Vender: variedad, kilos, precio, billetes, cambio y cobrar.</td></tr>
+      <tr><td><strong>Vales</strong></td><td>Mercancía pagada que se entrega después.</td></tr>
+      <tr><td><strong>Recepción</strong></td><td>Registrar la mercancía que llega (suma al inventario).</td></tr>
+      <tr><td><strong>Inventario</strong></td><td><em>Existencias</em> por variedad y <em>Fletes</em> (control de pesaje).</td></tr>
+      <tr><td><strong>Corte</strong></td><td>Cierre de caja del turno.</td></tr>
+      <tr><td><strong>Más</strong></td><td>Historial por día, respaldo y revisión de los datos.</td></tr>
+    </table>
+    <p>Arriba, un indicador dice <strong>En línea</strong> o <strong>Sin internet · funciona igual</strong>.</p>
+  </div>
+  <figure><img src="img/00-caja-inicio.png"><figcaption>Caja: variedad, calidad y calibre, kilos y precio</figcaption></figure>
+</div>
+
+<h2>3. Primer día: prepararla</h2>
+<p>La app arranca <strong>vacía a propósito</strong>: no inventa variedades, precios ni inventario.</p>
+<ol>
+  <li><strong>Variedades y precios.</strong> En la Caja da de alta cada variedad con <strong>tu</strong> precio por kilo (y, si quieres, origen,
+    calidad y calibre). Cada combinación tiene su propio precio e inventario.</li>
+  <li><strong>Existencia inicial.</strong> Registra lo que ya tienes en <em>Inventario → Existencias → Entrada</em>, o con <em>Recepción</em>. Mientras no
+    haya existencia, la app pide autorización explícita para cada venta (no inventa inventario).</li>
+  <li><strong>Turno de caja</strong> (opcional): en <em>Corte</em> abre el turno con el fondo inicial.</li>
+</ol>
+
+<h2 class="pb">4. Vender (Caja)</h2>
+<div class="row two">
+  <div>
+    <ol>
+      <li>Elige la variedad y la calidad.</li>
+      <li>Escribe los <strong>kilos</strong>; el precio por kilo ya viene y se puede cambiar.</li>
+      <li>Toca los <strong>billetes</strong> con que paga el cliente (o <em>Exacto</em>). La app muestra el <strong>cambio</strong>.</li>
+      <li>Toca <strong>Cobrar</strong>. Sale una hoja para <strong>confirmar</strong> antes de registrar la venta.</li>
+    </ol>
+    <p>Pagos: efectivo, transferencia o tarjeta. Cada venta queda con folio y fecha. Si tocas dos veces seguidas, se registra <strong>una sola</strong>.</p>
+    <p class="small">Si marcas «Vale», la venta es un vale (ver sección 5).</p>
+  </div>
+  <figure><img src="img/01-caja.png"><figcaption>Total, billetes y cambio</figcaption></figure>
+  <figure><img src="img/02-cobro.png"><figcaption>Hoja de confirmación</figcaption></figure>
+</div>
+
+<h2>5. Vales pagados</h2>
+<div class="row">
+  <div>
+    <p>Un <strong>vale</strong> es mercancía <strong>pagada por adelantado</strong>, no fiado. Al venderlo entra el dinero <strong>una sola vez</strong>
+      y los kilos quedan <strong>reservados</strong> (no se pueden vender a otro).</p>
+    <ul>
+      <li><strong>Pendiente</strong> → <strong>Entregado</strong>: al entregar no se cobra otra vez.</li>
+      <li><strong>Cancelado</strong>: pide un motivo y decidir si se devuelve el dinero (efectivo, transferencia o sin devolución).</li>
+    </ul>
+  </div>
+  <figure><img src="img/03-vales.png"><figcaption>Lista de vales</figcaption></figure>
+</div>
+
+<h2 class="pb">6. Recepción: la mercancía que llega</h2>
+<div class="row">
+  <div>
+    <p>Cuando llega mercancía, <strong>Recepción</strong> la suma al inventario (una sola vez, aunque se toque dos veces).</p>
+    <ol>
+      <li>Elige qué limón es (variedad, calidad, calibre).</li>
+      <li>¿Cómo llegó? A granel, en caja o en arpilla.</li>
+      <li>¿Cuánto pesa? Ya tienes los kilos netos, envases por kilos de cada uno, o peso con envase menos envase vacío.</li>
+      <li>Datos del lote (opcional): proveedor, referencia.</li>
+      <li><strong>Registrar recepción.</strong></li>
+    </ol>
+    <p>Si aún no sabes el peso, puedes guardar un <strong>borrador</strong>: no suma al inventario hasta confirmarlo. La app <strong>nunca convierte</strong> cajas o arpillas en kilos por su cuenta: el peso lo captura una persona.</p>
+    <p class="small">Recepción registra <strong>kilos</strong>, no dinero: no lleva costo de compra ni pagos a proveedores.</p>
+  </div>
+  <figure><img src="img/04-recepcion.png"><figcaption>Registrar una recepción</figcaption></figure>
+</div>
+
+<h2>7. Inventario (Existencias)</h2>
+<div class="row">
+  <div>
+    <p>Por cada variedad ves: <strong>físico</strong> (lo que hay en bodega), <strong>reservado</strong> (apartado por vales) y
+      <strong>disponible</strong> (lo que se puede vender). También el detalle de lo recibido, entradas manuales, vendido y mermas, con su historial de movimientos.</p>
+    <p>Para corregir una cantidad se hace un <strong>conteo o ajuste con motivo</strong>; nada se cambia en silencio.</p>
+  </div>
+  <figure><img src="img/05-inventario.png"><figcaption>Existencias por variedad</figcaption></figure>
+</div>
+
+<h2 class="pb">8. Fletes: el control de pesaje</h2>
+<p>Está en <strong>Inventario → Fletes</strong>. Sirve para comparar, flete por flete, lo que pesó la mercancía al <strong>salir</strong> (origen) contra lo que pesó al <strong>llegar</strong> (destino).
+  <strong>No suma ni resta inventario</strong> (eso se hace en Recepción) y no llama a la diferencia «merma» ni «deshidratación»: la causa la decides tú.</p>
+<div class="row two">
+  <div>
+    <h3>Las cuentas</h3>
+    <ul>
+      <li><strong>Peso neto</strong> = peso bruto − tara (o el neto directo, si solo tienes ese dato).</li>
+      <li><strong>Diferencia</strong> = neto inicial − neto final.</li>
+      <li><strong>Porcentaje</strong> = diferencia ÷ neto inicial × 100.</li>
+    </ul>
+    <div class="box ok"><strong>Ejemplo:</strong> sale con 22,000 kg brutos y 7,000 de tara = <strong>15,000 kg</strong> netos. Llega con <strong>14,760 kg</strong> netos.
+      Diferencia = 240 kg → 240 ÷ 15,000 × 100 = <strong>1.60 %</strong>.</div>
+    <h3>Para registrar uno</h3>
+    <ol>
+      <li><em>Nuevo flete</em>. La app propone un folio libre (puedes escribir el tuyo; <strong>no se repite</strong>).</li>
+      <li>Fecha, origen y destino.</li>
+      <li>Peso inicial (origen): bruto y tara, o solo el neto; boleta y báscula como evidencia.</li>
+      <li>Peso final (destino): igual. <strong>Puede quedar para después</strong>; el flete queda «incompleto» hasta capturarlo.</li>
+      <li>Revisa la <strong>diferencia</strong> que aparece y toca <strong>Guardar flete</strong>.</li>
+    </ol>
+  </div>
+  <figure><img src="img/06-fletes-lista.png"><figcaption>Fletes: lista y totales</figcaption></figure>
+  <figure><img src="img/08-flete-calculo.png"><figcaption>La diferencia se calcula sola</figcaption></figure>
+</div>
+<h3>El rango de referencia</h3>
+<p>Al final de la lista, <em>Rango de referencia</em>. De fábrica es <strong>200–300 kg</strong> y se muestra como <strong>«pendiente de validación»</strong>: es un punto de comparación,
+  <strong>no una regla confirmada</strong>. Se puede cambiar, marcar como validado cuando lo confirmes con tus propios datos, o no usar rango.</p>
+<table>
+  <tr><th>Si la diferencia es…</th><th>La pantalla dice</th></tr>
+  <tr><td>Entre el mínimo y el máximo</td><td>Dentro del rango de referencia</td></tr>
+  <tr><td>Menor que el mínimo / mayor que el máximo</td><td>Por debajo / por encima del rango de referencia</td></tr>
+  <tr><td>Negativa (llegó más de lo que salió)</td><td>El peso final es MAYOR que el inicial: revisa las boletas y el pesaje</td></tr>
+</table>
+<h3>Corregir y anular</h3>
+<ul>
+  <li><strong>Completar</strong> un dato que faltaba (por ejemplo el peso final) no pide motivo.</li>
+  <li><strong>Corregir</strong> algo ya capturado pide un <strong>motivo</strong> y queda en la <strong>bitácora</strong> del flete con el valor de antes y de después.</li>
+  <li><strong>Anular</strong> pide motivo, <strong>no borra nada</strong> y el folio queda reservado.</li>
+</ul>
+
+<h2 class="pb">9. Corte de caja</h2>
+<div class="row">
+  <div>
+    <p>El <strong>Corte</strong> resume el turno: ventas, entregadas contra vales, forma de pago, fondo inicial, salidas de efectivo (con motivo) y devoluciones.
+      Calcula el <strong>efectivo esperado</strong> = fondo + ventas en efectivo − salidas − devoluciones en efectivo. Al cerrar, capturas lo contado y la app muestra la <strong>diferencia</strong>.</p>
+    <p>El cambio que se da a un cliente <strong>no</strong> es un gasto.</p>
+    <p class="small">Las cifras de la imagen son de ejemplo.</p>
+  </div>
+  <figure><img src="img/09-corte.png"><figcaption>Corte de caja del turno</figcaption></figure>
+</div>
+
+<h2>10. Respaldo y cuidado de tus datos</h2>
+<div class="row">
+  <div>
+    <p>Todo vive <strong>solo en tu teléfono</strong>. No hay servidor ni cuenta. Por eso:</p>
+    <ul>
+      <li>En <em>Más</em> → <strong>Exportar respaldo</strong> baja un archivo; mándalo fuera del teléfono (WhatsApp, correo, Drive). Hazlo <strong>seguido</strong>, sobre todo antes de actualizar la app.</li>
+      <li><strong>Restaurar</strong> reemplaza todo lo que hay en el teléfono por lo del archivo. La app avisa qué se perdería, pide confirmar y guarda una copia interna por si te equivocas (<em>Deshacer</em>).</li>
+      <li><strong>Auditar integridad</strong> revisa que cuentas, folios e inventario cuadren.</li>
+      <li>Si borras la app o sus datos, <strong>se pierden</strong> los datos que no hayas respaldado.</li>
+    </ul>
+  </div>
+  <figure><img src="img/11-mas-respaldo.png"><figcaption>Más: respaldo y estado de los datos</figcaption></figure>
+</div>
+
+<h2>11. Lo que todavía NO hace</h2>
+<ul>
+  <li><strong>No sincroniza entre teléfonos</strong> ni tiene usuarios o contraseñas: dos teléfonos son dos negocios separados y no sabe «quién» capturó cada cosa.</li>
+  <li>No guarda <strong>fotos</strong> de la boleta o la báscula (solo el número y el nombre como texto).</li>
+  <li>Sin impresión de tickets, sin fiado ni cobro parcial de vales, sin costos de compra ni cuentas por pagar.</li>
+  <li>El rango de 200–300 kg es una <strong>referencia sin validar</strong>.</li>
+</ul>
+
+<h2>Preguntas frecuentes</h2>
+<table>
+  <tr><td><strong>¿Funciona sin internet?</strong></td><td>Está diseñada para eso (internet solo hace falta la primera vez). Falta confirmarlo en tu teléfono con el modo avión.</td></tr>
+  <tr><td><strong>Cambié de teléfono, ¿qué hago?</strong></td><td>Exporta un respaldo en el viejo, instala la app en el nuevo y usa <em>Más → Restaurar desde archivo</em>.</td></tr>
+  <tr><td><strong>Me equivoqué en un flete o una venta.</strong></td><td>Se corrige o se anula con motivo; queda anotado y nada se borra.</td></tr>
+  <tr><td><strong>Salió un aviso de versión nueva.</strong></td><td>Toca <em>Actualizar ahora</em> cuando termines lo que capturabas. Tus datos no se tocan.</td></tr>
+  <tr><td><strong>La app se ve distinta en Safari y en el ícono.</strong></td><td>En iPhone son dos almacenes de datos distintos. Usa siempre el ícono.</td></tr>
+</table>
+<p class="small">Versión de la app 0.3.0 · Documento de prueba con capturas de ejemplo.</p>
+
+</body>
+</html>
