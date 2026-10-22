@@ -1650,7 +1650,7 @@ test.describe('Vales con existencia insuficiente y anulaciones', () => {
     const sale1 = page.getByTestId('sale-row').filter({ has: page.locator('header strong').filter({ hasText: /^#1$/ }) });
     await sale1.getByRole('button', { name: 'Anular' }).click();
     await expectNewToast(page, n, 'Venta #1 anulada');
-    await expect(sale1).toContainText('ANULADA (error de captura)');
+    await expect(sale1).toContainText('ANULADA');
     await expect(sale1.getByRole('button', { name: 'Anular' }), 'ya anulada: no se ofrece otra vez').toHaveCount(0);
     await expect(page.getByTestId('r-total')).toContainText('$152.00');
     await expect(page.getByRole('listitem').filter({ hasText: labelOf(a) })).toHaveCount(0); // la anulada ya no cuenta en «Por variedad»

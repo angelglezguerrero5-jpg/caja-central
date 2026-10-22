@@ -328,7 +328,7 @@ test('respaldo con registros dañados se rechaza y NO borra las ventas existente
   await expect(page.getByTestId('variety').first()).toBeVisible(); // variedades intactas
 });
 
-test('doble pulsación en "Registrar salida" y en "Guardar entrada" no registra dos veces', async ({ page }) => {
+test('doble pulsación en "Registrar gasto" y en "Guardar entrada" no registra dos veces', async ({ page }) => {
   await openApp(page);
   await tab(page, 'corte');
   await page.getByTestId('opening').fill('100');

@@ -6,7 +6,7 @@ import type { Sale } from '../domain/types';
 import { useApp } from './ctx';
 
 function stateLabel(s: Sale): string {
-  if (s.status === 'anulada') return `ANULADA (${s.voidReason})`;
+  if (s.status === 'anulada') return s.voidReason ? `ANULADA (${s.voidReason})` : 'ANULADA';
   if (s.delivery === 'pendiente') return `VALE V-${s.valeFolio} · PENDIENTE`;
   if (s.delivery === 'entregado') return `VALE V-${s.valeFolio} · ENTREGADO`;
   if (s.delivery === 'cancelado') return `VALE V-${s.valeFolio} · CANCELADO`;

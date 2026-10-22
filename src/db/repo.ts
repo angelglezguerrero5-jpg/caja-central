@@ -830,10 +830,9 @@ export async function deliverVale(db: DB, saleId: string): Promise<Sale> {
   });
 }
 
-/** Anula una venta del turno abierto y revierte su efecto en inventario. */
-export async function voidSale(db: DB, saleId: string, reason: string): Promise<Sale> {
+/** Anula una venta del turno abierto y revierte su efecto en inventario. El motivo es opcional. */
+export async function voidSale(db: DB, saleId: string, reason = ''): Promise<Sale> {
   const r = checkedText(reason, 'Motivo', MAX_REASON);
-  if (!r) throw new Error('Indica el motivo de la anulación');
   return runRw(db, ['sales', 'shifts', 'products', 'stockMoves'], async (tx) => {
     const sale: Sale | undefined = await tx.objectStore('sales').get(saleId);
     if (!sale) throw abortWith(tx, 'Venta no encontrada');
@@ -844,11 +843,12 @@ export async function voidSale(db: DB, saleId: string, reason: string): Promise<
       throw abortWith(tx, 'No se puede anular: el turno de esa venta ya fue cerrado');
     }
     const at = now();
-    await tx.objectStore('sales').put({ ...sale, status: 'anulada', voidReason: r, voidedAt: at });
+    const voided: Sale = { ...sale, status: 'anulada', voidedAt: at, ...(r ? { voidReason: r } : {}) };
+    await tx.objectStore('sales').put(voided);
     for (const it of sale.items) {
       await moveStock(tx, it.productId, 'anulacion', it.qtyMilli, 0, `Anula ${sale.folio}`, at, sale.id);
     }
-    return { ...sale, status: 'anulada', voidReason: r, voidedAt: at };
+    return voided;
   });
 }
 

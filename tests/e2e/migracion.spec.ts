@@ -146,7 +146,7 @@ test.describe('Migración v1→v2 con datos previos (casos 24, 23, 25)', () => {
     await expect(page.getByTestId('r-efectivo')).toHaveText('$2,106.00');
     await expect(page.getByTestId('r-refunds')).toContainText('$350.00');
     await expect(page.getByTestId('sale-row')).toHaveCount(4); // las 3 válidas + la #4 anulada
-    await expect(page.getByTestId('sale-row').filter({ hasText: '#4' })).toContainText('ANULADA (error de captura)');
+    await expect(page.getByTestId('sale-row').filter({ hasText: '#4' })).toContainText('ANULADA');
     const closed = page.getByTestId('closed-shift');
     await expect(closed).toHaveCount(1);
     await expect(closed).toContainText('esperado $1,160.00'); // el corte cerrado conserva lo que dijo v1
@@ -192,7 +192,7 @@ test.describe('Migración v1→v2 con datos previos (casos 24, 23, 25)', () => {
     const histRow = (n: number) => page.getByTestId('hist-row').filter({ hasText: `#${n}` });
     await expect(histRow(1)).toContainText('Entregada');
     await expect(histRow(3)).toContainText('VALE V-1 · ENTREGADO');
-    await expect(histRow(4)).toContainText('ANULADA (error de captura)');
+    await expect(histRow(4)).toContainText('ANULADA');
     await expect(histRow(5)).toContainText('VALE V-2 · PENDIENTE');
     await expect(histRow(6)).toContainText('VALE V-3 · CANCELADO');
 

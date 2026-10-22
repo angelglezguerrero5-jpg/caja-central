@@ -408,8 +408,9 @@ describe('turnos y corte', () => {
     await createSale(db, { cart, paymentMethod: 'transferencia', receivedCents: 0 });
     await addCashOut(db, 500, 'bolsas');
     await expect(addCashOut(db, 500, ' ')).rejects.toThrow();
-    await expect(voidSale(db, b.id, '  ')).rejects.toThrow();
-    await voidSale(db, b.id, 'error de captura');
+    const voidedNoReason = await voidSale(db, b.id); // el motivo es opcional
+    expect(voidedNoReason.status).toBe('anulada');
+    expect(voidedNoReason.voidReason).toBeUndefined();
     await expect(voidSale(db, b.id, 'otra vez')).rejects.toThrow('ya estaba anulada');
     expect(a.shiftId).toBe(shift.id);
 

@@ -82,7 +82,7 @@ export function auditData(b: Backup, currentShiftId?: string): AuditResult {
       if (!s.cancelReason) bad(`${tag}: vale cancelado sin motivo`);
       if (!s.refundMethod) bad(`${tag}: vale cancelado sin decisión sobre el dinero`);
     }
-    if (s.status === 'anulada' && !s.voidReason) bad(`${tag}: venta anulada sin motivo`);
+    if (s.status === 'anulada' && !s.voidedAt) bad(`${tag}: venta anulada sin fecha`);
   }
 
   // --- Devoluciones en efectivo ↔ vales cancelados con devolución en efectivo

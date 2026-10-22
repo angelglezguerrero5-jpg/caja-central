@@ -114,7 +114,7 @@ export function Corte() {
         <div><dt>Transferencia</dt><dd>{formatMoney(report.byMethod.transferencia)}</dd></div>
         <div><dt>Tarjeta</dt><dd>{formatMoney(report.byMethod.tarjeta)}</dd></div>
         <div><dt>Fondo inicial</dt><dd>{formatMoney(report.openingCashCents)}</dd></div>
-        <div><dt>Salidas de efectivo</dt><dd>−{formatMoney(report.cashOutCents)}</dd></div>
+        <div><dt>Gastos</dt><dd>−{formatMoney(report.cashOutCents)}</dd></div>
         <div><dt>Devoluciones de vales</dt><dd data-testid="r-refunds">−{formatMoney(report.refundsCents)}</dd></div>
         <div class="strong"><dt>Efectivo esperado</dt><dd data-testid="r-expected">{formatMoney(report.expectedCashCents)}</dd></div>
       </dl>
@@ -154,10 +154,10 @@ export function Corte() {
         </button>
       </div>
 
-      <h3>Salida de efectivo</h3>
+      <h3>Gastos</h3>
       <div class="inline-form">
         <input
-          aria-label="Monto de la salida, en pesos"
+          aria-label="Monto del gasto, en pesos"
           placeholder="Monto"
           data-testid="out-amount"
           inputMode="decimal"
@@ -182,7 +182,7 @@ export function Corte() {
             setOutConcept('');
           }}
         >
-          Registrar salida
+          Registrar gasto
         </button>
       </div>
       {moves.map((m) => (
@@ -204,14 +204,13 @@ export function Corte() {
             {s.delivery === 'pendiente' && ` · VALE V-${s.valeFolio} pendiente`}
             {s.delivery === 'entregado' && ` · VALE V-${s.valeFolio} entregado`}
             {s.delivery === 'cancelado' && ` · VALE V-${s.valeFolio} cancelado`}
-            {s.status === 'anulada' && ` · ANULADA (${s.voidReason})`}
+            {s.status === 'anulada' && (s.voidReason ? ` · ANULADA (${s.voidReason})` : ' · ANULADA')}
           </p>
           {s.status === 'completada' && s.delivery === 'inmediata' && (
             <button
               class="danger small"
               onClick={() => {
-                const reason = window.prompt(`Motivo para anular la venta #${s.folio}:`);
-                if (reason) run(() => voidSale(db, s.id, reason), `Venta #${s.folio} anulada`);
+                if (window.confirm(`¿Anular la venta #${s.folio}?`)) run(() => voidSale(db, s.id), `Venta #${s.folio} anulada`);
               }}
             >
               Anular
