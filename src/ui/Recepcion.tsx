@@ -1,3 +1,4 @@
+import type { JSX } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { cancelReceptionDraft, listReceptions } from '../db/receptions';
 import { listProducts } from '../db/repo';
@@ -10,8 +11,27 @@ import { fmtDateTime } from './format';
 import { RecepcionHistorial, STATUS_LABEL } from './RecepcionHistorial';
 import { RecepcionNueva } from './RecepcionNueva';
 import { ResumenMercancia } from './ResumenMercancia';
+import './recepcion.css';
 
 type Sub = 'nueva' | 'borradores' | 'historial' | 'resumen';
+
+/** Íconos de las sub-pestañas (trazos simples, decorativos: la etiqueta de texto es la que cuenta). */
+const ICON: Record<Sub, JSX.Element> = {
+  nueva: (
+    <>
+      <rect x="3" y="3" width="18" height="18" rx="3" />
+      <path d="M12 8v8M8 12h8" />
+    </>
+  ),
+  borradores: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </>
+  ),
+  historial: <path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01" />,
+  resumen: <path d="M3 20h18M6 20v-8M12 20V5M18 20v-11" />,
+};
 
 /**
  * Recepción de mercancía: registrar lo que llega al andén (kilos netos, presentación, clasificación), con borradores,
@@ -27,27 +47,31 @@ export function Recepcion({ active }: { active: boolean }) {
     listReceptions(db, { status: 'borrador' }).then((d) => setDraftCount(d.length));
   }, [db, version]);
 
+  // Palabras de bodega: lo que se está recibiendo, lo que quedó pendiente, lo que ya entró y los totales.
   const SUBS: Array<[Sub, string]> = [
-    ['nueva', 'Nueva'],
-    ['borradores', draftCount > 0 ? `Borradores (${draftCount})` : 'Borradores'],
-    ['historial', 'Historial'],
-    ['resumen', 'Resumen'],
+    ['nueva', 'Nueva entrada'],
+    ['borradores', draftCount > 0 ? `Pendientes (${draftCount})` : 'Pendientes'],
+    ['historial', 'Entradas anteriores'],
+    ['resumen', 'Totales'],
   ];
 
   return (
     <section data-testid="recepcion">
       <h2>Recepción de mercancía</h2>
-      <div class="tabs-state" role="tablist">
+      <div class="tabs-state rec-subtabs" role="tablist" aria-label="Recepción">
         {SUBS.map(([id, label]) => (
           <button
             key={id}
             role="tab"
             aria-selected={sub === id}
-            class={sub === id ? 'active' : ''}
+            class={`${sub === id ? 'active' : ''}${id === 'borradores' && draftCount > 0 ? ' has-count' : ''}`}
             data-testid={`rec-sub-${id}`}
             onClick={() => setSub(id)}
           >
-            {label}
+            <svg class="rec-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              {ICON[id]}
+            </svg>
+            <span>{label}</span>
           </button>
         ))}
       </div>
@@ -108,10 +132,10 @@ function Borradores({ onOpen }: { onOpen: (r: Reception) => void }) {
   return (
     <div data-testid="rec-borradores">
       <p class="hint">
-        Un borrador es una recepción que todavía no sumas al inventario (por ejemplo, porque aún no sabes el peso). Puede estar
-        incompleto: no cambia el inventario hasta registrarlo.
+        Aquí quedan las entradas que guardaste para después (borradores), por ejemplo porque aún no sabías el peso. NO suman al
+        inventario hasta que las abras y toques «Registrar entrada».
       </p>
-      {drafts.length === 0 && <p class="empty">No hay borradores.</p>}
+      {drafts.length === 0 && <p class="empty">Nada pendiente. No hay borradores.</p>}
       {drafts.map((r) => {
         const prod = products.find((p) => p.id === r.productId);
         const net = computeNet(r);
@@ -119,7 +143,7 @@ function Borradores({ onOpen }: { onOpen: (r: Reception) => void }) {
         return (
           <article class="card" key={r.id} data-testid="rec-draft-row">
             <header>
-              <strong>{prod ? productLabel(prod) : 'Sin tipo de limón elegido'}</strong>
+              <strong>{prod ? productLabel(prod) : 'Sin producto elegido'}</strong>
               <span class="badge">{STATUS_LABEL.borrador}</span>
             </header>
             <p class="hint">

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-labelledby="t">
+  <title id="t">Caja Central: gráfica de barras ascendente con signo de peso</title>
+  <!-- Fondo naranja con esquinas redondeadas. scripts/gen-icons.mjs lo pone a sangre (rx=0) para maskable y apple-touch-icon. -->
+  <rect id="bg" width="512" height="512" rx="112" fill="#ff9f1c"/>
+  <!-- Dibujo (barras + $). gen-icons.mjs lo escala hacia el centro para dejarlo dentro de la zona segura del maskable. -->
+  <g id="art" fill="#0e1320">
+    <!-- Tres barras ascendentes sobre una línea base -->
+    <rect x="104" y="322" width="80" height="86" rx="14"/>
+    <rect x="216" y="226" width="80" height="182" rx="14"/>
+    <rect x="328" y="128" width="80" height="280" rx="14"/>
+    <rect x="88" y="404" width="336" height="20" rx="10"/>
+    <!-- Signo de peso: S trazada + barra vertical -->
+    <g transform="translate(160 168)" fill="none" stroke="#0e1320" stroke-linecap="round" stroke-linejoin="round">
+      <path stroke-width="30" d="M46 -42 Q38 -66 0 -66 Q-48 -66 -48 -33 Q-48 -6 0 0 Q48 6 48 33 Q48 66 0 66 Q-40 66 -48 42"/>
+      <path stroke-width="26" d="M0 -96 V96"/>
+    </g>
+  </g>
+</svg>

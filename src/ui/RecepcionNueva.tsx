@@ -1,3 +1,4 @@
+import type { ComponentChildren } from 'preact';
 import { BRAND } from '../brand';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import {
@@ -184,6 +185,10 @@ export function RecepcionNueva({ active, loadDraft, onDraftLoaded, onGoDrafts }:
   const [restored, setRestored] = useState(!!snap0 && hasContent(snap0));
   const [clearArmed, setClearArmed] = useState(false);
   const [parked, setParked] = useState<string | null>(null);
+  // Solo presentación: qué pasos terminados se ven cerrados en su línea resumen (1 = qué llegó, 3 = cuánto pesa) y si ya se
+  // eligió a propósito la presentación. No toca ningún dato ni cálculo.
+  const [folded, setFolded] = useState<{ 1: boolean; 3: boolean }>({ 1: !!snap0?.productId, 3: false });
+  const [packTouched, setPackTouched] = useState(!!snap0 && hasContent(snap0));
   // Un id por intento de recepción: reintentar (doble toque, recarga) con el mismo id NO suma dos veces.
   const attemptId = useRef(snap0?.attemptId ?? newId());
   const firstInput = useRef<HTMLInputElement>(null);
@@ -297,8 +302,11 @@ export function RecepcionNueva({ active, loadDraft, onDraftLoaded, onGoDrafts }:
 
   function pickProduct(p: Product) {
     setProductId(p.id);
+    // Elegido el producto, su paso se cierra en una línea («Chayote · Primera») que se toca para cambiarlo.
+    setFolded((f) => ({ ...f, 1: true }));
   }
   function pickPackaging(pk: Packaging) {
+    setPackTouched(true);
     setPackaging(pk);
     lsSet(LS_PACKAGING, pk);
     // El modo natural de la presentación (o el último que se usó con ella): a granel kilos; cajas/arpillas × lo que pesa cada una.
@@ -331,6 +339,8 @@ export function RecepcionNueva({ active, loadDraft, onDraftLoaded, onGoDrafts }:
     setWhenText(toLocalInput(new Date()));
     setRestored(false);
     setClearArmed(false);
+    setFolded({ 1: false, 3: false });
+    setPackTouched(false);
     // La clasificación se elige SIEMPRE a propósito: lo más caro de equivocar no se hereda de la recepción anterior.
     if (clearProduct) setProductId('');
   }
@@ -371,6 +381,8 @@ export function RecepcionNueva({ active, loadDraft, onDraftLoaded, onGoDrafts }:
       setWhenText(toLocalInput(new Date(loadDraft.receivedAt)));
       whenEdited.current = true;
       setRestored(false);
+      setFolded({ 1: !!f.productId, 3: false });
+      setPackTouched(true);
       onDraftLoaded();
       toast('Borrador abierto: completa lo que falta');
     })();
@@ -557,7 +569,32 @@ export function RecepcionNueva({ active, loadDraft, onDraftLoaded, onGoDrafts }:
     toast('Mismo camión: elige la siguiente clasificación y captura sus kilos');
   }
 
-  const netHint = net.ok ? `${describe()}${selected ? ` · ${productLabel(selected)}` : ''}` : confirmErrors[0] ?? (net.missing ? net.error : `⚠ ${net.error}`);
+  // ---- Pasos (solo presentación: qué está hecho, cuál sigue y qué se ve cerrado en su línea resumen)
+  const weightTyped = !!(netText || weighings.length || containersText || unitText || grossText || tareText);
+  const done1 = !!selected;
+  const done2 = done1 && (packTouched || weightTyped);
+  // Un paso con algo ilegible o que no cuadra nunca cuenta como terminado: se queda abierto.
+  const done3 = net.ok && !problem;
+  const current = !done1 ? 1 : !done2 ? 2 : !done3 ? 3 : 4;
+  const shut1 = folded[1] && done1;
+  const shut3 = folded[3] && done3;
+  const STEP_TITLE = ['', '¿Qué llegó?', '¿Cómo llegó?', '¿Cuánto pesa?', '¿De quién y cuándo?'];
+  const nounCap = noun.many.charAt(0).toUpperCase() + noun.many.slice(1);
+  const countText = fields.containers !== undefined ? `${fields.containers} ${fields.containers === 1 ? noun.one : noun.many}` : '';
+
+  /** Detalle corto del peso para la barra y la línea resumen: «12 cajas», «10 cajas × 12.5 kg», «3 pesadas». */
+  function weightDetail(): string {
+    if (!net.ok) return '';
+    if (mode === 'por_envase' || mode === 'bruto_tara') return [mode === 'bruto_tara' ? countText : '', describe()].filter(Boolean).join(' · ');
+    const parts = [countText || (packaging === 'granel' ? PACKAGING_LABEL.granel : '')];
+    if (fields.weighingsMilli) parts.push(`${fields.weighingsMilli.length} pesadas`);
+    return parts.filter(Boolean).join(' · ');
+  }
+
+  // Resumen vivo de la barra: «Chayote · Primera · 12 cajas» sobre los kilos. Si falta algo, dice qué.
+  const netHint = net.ok
+    ? [selected ? productLabel(selected) : '', weightDetail()].filter(Boolean).join(' · ') || describe()
+    : confirmErrors[0] ?? (net.missing ? net.error : `⚠ ${net.error}`);
   const avg =
     net.ok && mode !== 'por_envase' && fields.containers && fields.containers > 0
       ? Math.round(net.netMilli / fields.containers)
@@ -565,7 +602,7 @@ export function RecepcionNueva({ active, loadDraft, onDraftLoaded, onGoDrafts }:
 
   const dateNote =
     receivedDay !== today
-      ? `Llegó ${dayLabel(receivedDay)}: se contará en ese día en el Resumen (el inventario se suma ahora).`
+      ? `Llegó ${dayLabel(receivedDay)}: se contará en ese día en el Resumen («Totales»); el inventario se suma ahora.`
       : !whenEdited.current && new Date().getHours() < 6
         ? 'Es de madrugada. Si el camión llegó anoche, toca «Ayer» y ajusta la hora.'
         : '';
@@ -573,8 +610,74 @@ export function RecepcionNueva({ active, loadDraft, onDraftLoaded, onGoDrafts }:
   const enter = { onKeyDown: (e: KeyboardEvent) => e.key === 'Enter' && onEnter() };
   const available = selected ? selected.physicalMilli - selected.reservedMilli : 0;
 
+  /** Tocar un campo de «¿De quién y cuándo?» con el peso ya completo cierra «¿Cuánto pesa?» en su línea («240 kg»). */
+  function onLotClick(e: MouseEvent) {
+    if (done3 && (e.target as HTMLElement).tagName === 'INPUT') setFolded((f) => (f[3] ? f : { ...f, 3: true }));
+  }
+
+  /** Encabezado de un paso. Terminado y plegable: es un botón que abre y cierra el paso (su línea resumen). */
+  // Se llama como función (no como <Componente/>): así Preact no vuelve a montar el botón en cada tecla y el foco no se pierde.
+  function stepHead(p: { n: 1 | 2 | 3 | 4; done: boolean; open?: boolean; foldable?: boolean; optional?: boolean; children?: ComponentChildren }) {
+    const mark = (
+      <span class={p.done ? 'rec-num done' : p.n === current ? 'rec-num now' : 'rec-num'}>
+        {p.done ? '✓' : p.n}
+      </span>
+    );
+    const title = (
+      <span class="rec-q">
+        {STEP_TITLE[p.n]}
+        {p.optional && <small> (opcional)</small>}
+      </span>
+    );
+    if (p.foldable && p.done) {
+      return (
+        <h3 class="rec-h">
+          <button
+            type="button"
+            class={p.open ? 'rec-head open' : 'rec-head'}
+            aria-expanded={!!p.open}
+            aria-controls={`rec-step-${p.n}-body`}
+            data-testid={`rec-step-${p.n}-sum`}
+            onClick={() => setFolded((f) => ({ ...f, [p.n as 1 | 3]: !!p.open }))}
+          >
+            {mark}
+            <span class="rec-head-txt">
+              {title}
+              {p.children && <span class="rec-ans">{p.children}</span>}
+            </span>
+            <span class="rec-edit">{p.open ? 'Cerrar' : 'Cambiar'}</span>
+          </button>
+        </h3>
+      );
+    }
+    return (
+      <h3 class="rec-h">
+        <span class="rec-head static">
+          {mark}
+          <span class="rec-head-txt">
+            {title}
+            {p.children && <span class="rec-ans">{p.children}</span>}
+          </span>
+        </span>
+      </h3>
+    );
+  }
+
+  const selectedLine = selected && (
+    <span data-testid="rec-selected">
+      <strong>{productLabel(selected)}</strong>
+      <span class="rec-ans-more">
+        {' '}
+        · en bodega ahora: {kgOf(selected.physicalMilli)}
+        {selected.reservedMilli > 0 && ` (apartado por vales: ${kgOf(selected.reservedMilli)})`}
+        {available < 0 && <span class="neg"> · ⚠ disponible negativo ({kgOf(available)}): esta recepción lo cubre</span>}
+        {selected.priceCents === 0 && ' · sin precio todavía (ponle precio en Caja antes de venderlo)'}
+      </span>
+    </span>
+  );
+
   return (
-    <div data-testid="rec-nueva">
+    <div data-testid="rec-nueva" class="rec">
       {restored && (
         <div class="notice" role="status" data-testid="rec-restored">
           Recuperé lo que estabas capturando. Revísalo antes de registrar.{' '}
@@ -587,294 +690,351 @@ export function RecepcionNueva({ active, loadDraft, onDraftLoaded, onGoDrafts }:
         <div class="notice" role="status" data-testid="rec-parked">
           Borrador guardado {parked}: NO suma al inventario.{' '}
           <button class="link" data-testid="rec-go-drafts" onClick={onGoDrafts}>
-            Ver borradores
+            Ver pendientes
           </button>
         </div>
       )}
 
-      <div ref={productBlock}>
-        <h3 class="step">1 · ¿Qué limón llegó?</h3>
-        {products.length === 0 ? (
-          <div data-testid="rec-sin-productos">
-            <p class="hint">
-              Primero da de alta la clasificación que vas a recibir (la recepción suma kilos, así que debe venderse por kg). El
-              precio puede quedar «Sin precio todavía».
-            </p>
-          </div>
-        ) : (
-          <ProductChips
-            products={products}
-            selectedId={selected?.id}
-            onSelect={pickProduct}
-            onClear={() => setProductId('')}
-            testids={{ variety: 'rec-variety', cls: 'rec-class' }}
-            allowEmpty
-            requireClass
-          />
-        )}
-        {selected ? (
-          <p class="hint" data-testid="rec-selected">
-            <strong>{productLabel(selected)}</strong> · en bodega ahora: {kgOf(selected.physicalMilli)}
-            {selected.reservedMilli > 0 && ` (apartado por vales: ${kgOf(selected.reservedMilli)})`}
-            {available < 0 && <span class="neg"> · ⚠ disponible negativo ({kgOf(available)}): esta recepción lo cubre</span>}
-            {selected.priceCents === 0 && ' · sin precio todavía (ponle precio en Caja antes de venderlo)'}
-          </p>
-        ) : (
-          products.length > 0 && !touched && <p class="hint" data-testid="rec-pick-hint">Empieza por elegir qué limón llegó.</p>
-        )}
-        <button class="link" data-testid="rec-new-class-toggle" onClick={() => setShowNewClass(true)}>
-          ＋ Nueva clasificación
-        </button>
-      </div>
-
-      <h3 class="step">2 · ¿Cómo llegó?</h3>
-      <div class="chips" role="group" aria-label="Presentación">
-        {PACKAGINGS.map((pk) => (
-          <button
-            type="button"
-            key={pk}
-            role="radio"
-            aria-checked={packaging === pk}
-            class={packaging === pk ? 'chip active' : 'chip'}
-            data-testid={`rec-pack-${pk}`}
-            onClick={() => pickPackaging(pk)}
-          >
-            {PACKAGING_LABEL[pk]}
-          </button>
-        ))}
-      </div>
-
-      <h3 class="step">3 · ¿Cuánto pesa?</h3>
-      <div class="chips small" role="group" aria-label="Cómo capturar el peso">
-        {WEIGHT_MODES.map((m) => (
-          <button
-            type="button"
-            key={m}
-            role="radio"
-            aria-checked={mode === m}
-            disabled={m === 'por_envase' && packaging === 'granel'}
-            class={mode === m ? 'chip active' : 'chip'}
-            data-testid={`rec-mode-${m}`}
-            onClick={() => pickMode(m)}
-          >
-            {m === 'directo'
-              ? 'Ya tengo los kilos netos'
-              : m === 'por_envase'
-                ? `${noun.many.charAt(0).toUpperCase() + noun.many.slice(1)} × kilos de cada una`
-                : 'Con envase − envase vacío'}
-          </button>
-        ))}
-      </div>
-      <p class="help" data-testid="rec-mode-help">
-        {mode === 'directo'
-          ? 'Escribe los kilos de limón (sin caja ni costal). Si pesaste por partes, usa «Sumar varias pesadas».'
-          : mode === 'por_envase'
-            ? `Cuenta las ${noun.many} y escribe cuánto pesa (de limón) cada una. La app no supone ese peso.`
-            : WEIGHT_GLOSSARY}
-      </p>
-
-      {mode === 'directo' && !useWeighings && (
-        <label class="field">
-          <span>Kilos netos recibidos</span>
-          <input
-            ref={firstInput}
-            data-testid="rec-net-direct"
-            inputMode="decimal"
-            autoComplete="off"
-            enterKeyHint="go"
-            placeholder="0"
-            value={netText}
-            {...enter}
-            onInput={(e) => setNetText((e.target as HTMLInputElement).value)}
-          />
-        </label>
-      )}
-      {mode === 'directo' && useWeighings && (
-        <div data-testid="rec-weigh">
-          <div class="row2 weigh-add">
-            <label class="field">
-              <span>Kilos de esta pesada</span>
-              <input
-                ref={weighInput}
-                data-testid="rec-weigh-input"
-                inputMode="decimal"
-                autoComplete="off"
-                enterKeyHint="done"
-                placeholder="0"
-                value={weighText}
-                onInput={(e) => setWeighText((e.target as HTMLInputElement).value)}
-                onKeyDown={(e) => e.key === 'Enter' && addWeighing()}
-              />
-            </label>
-            <button class="primary add-weigh" data-testid="rec-weigh-add" onClick={addWeighing}>
-              ＋ Sumar
-            </button>
-          </div>
-          <ul class="plain weigh-list">
-            {weighings.map((w, i) => (
-              <li key={i} data-testid="rec-weigh-item">
-                <span>
-                  Pesada {i + 1}: <strong>{kgOf(w)}</strong>
-                </span>
-                <button
-                  class="small"
-                  data-testid="rec-weigh-remove"
-                  aria-label={`Quitar la pesada ${i + 1}`}
-                  onClick={() => setWeighings(weighings.filter((_, k) => k !== i))}
-                >
-                  ×
-                </button>
-              </li>
-            ))}
-          </ul>
-          <p class="hint" data-testid="rec-weigh-total">
-            {weighings.length} {weighings.length === 1 ? 'pesada' : 'pesadas'} = {kgOf(weighSum)}
-          </p>
-        </div>
-      )}
-      {mode === 'directo' && (
-        <button class="link" data-testid="rec-weigh-toggle" onClick={toggleWeighings}>
-          {useWeighings ? 'Capturar un solo total' : 'Sumar varias pesadas'}
-        </button>
-      )}
-
-      {mode === 'por_envase' && (
-        <div class="row2">
-          <label class="field">
-            <span>¿Cuántas {noun.many}?</span>
-            <input
-              ref={firstInput}
-              data-testid="rec-containers"
-              inputMode="numeric"
-              autoComplete="off"
-              enterKeyHint="next"
-              placeholder="0"
-              value={containersText}
-              onInput={(e) => setContainersText((e.target as HTMLInputElement).value)}
-            />
-          </label>
-          <label class="field">
-            <span>Kilos netos por {noun.one}</span>
-            <input
-              data-testid="rec-unit-net"
-              inputMode="decimal"
-              autoComplete="off"
-              enterKeyHint="go"
-              placeholder="0"
-              value={unitText}
-              {...enter}
-              onInput={(e) => setUnitText((e.target as HTMLInputElement).value)}
-            />
-          </label>
-        </div>
-      )}
-      {mode === 'por_envase' && lastUnit !== undefined && unitText.trim() === '' && (
-        <button class="chip" data-testid="rec-use-last" onClick={() => setUnitText(milliToText(lastUnit.unitNetMilli))}>
-          Usar {kgOf(lastUnit.unitNetMilli)} por {noun.one}
-          {lastUnit.folio !== undefined && ` (lo que capturaste en R-${lastUnit.folio})`}
-        </button>
-      )}
-      {mode === 'bruto_tara' && (
-        <div class="row2">
-          <label class="field">
-            <span>Peso bruto (kg)</span>
-            <input
-              ref={firstInput}
-              data-testid="rec-gross"
-              inputMode="decimal"
-              autoComplete="off"
-              enterKeyHint="next"
-              placeholder="0"
-              value={grossText}
-              onInput={(e) => setGrossText((e.target as HTMLInputElement).value)}
-            />
-          </label>
-          <label class="field">
-            <span>Tara (kg)</span>
-            <input
-              data-testid="rec-tare"
-              inputMode="decimal"
-              autoComplete="off"
-              enterKeyHint="go"
-              placeholder="0"
-              value={tareText}
-              {...enter}
-              onInput={(e) => setTareText((e.target as HTMLInputElement).value)}
-            />
-          </label>
-        </div>
-      )}
-      {mode !== 'por_envase' && packaging !== 'granel' && (
-        <label class="field">
-          <span>¿Cuántas {noun.many}? (opcional, solo para llevar la cuenta)</span>
-          <input
-            data-testid="rec-containers"
-            inputMode="numeric"
-            autoComplete="off"
-            value={containersText}
-            onInput={(e) => setContainersText((e.target as HTMLInputElement).value)}
-          />
-        </label>
-      )}
-      {problem && (
-        <p class="notice" role="alert" data-testid="rec-input-problem">
-          {problem}
+      <div class="rec-progress" data-testid="rec-progress">
+        <p aria-live="polite">
+          <strong>Paso {current} de 4</strong> ·{' '}
+          {current === 4 ? 'Ya puedes registrar. Lo de abajo es opcional.' : STEP_TITLE[current]}
         </p>
-      )}
-      {avg !== undefined && (
-        <p class="hint" data-testid="rec-avg">
-          Eso da {kgOf(avg)} por {noun.one} (promedio, solo informativo).
-        </p>
-      )}
+        <div class="rec-bar" aria-hidden="true">
+          {[1, 2, 3, 4].map((n) => (
+            <span key={n} class={(n === 1 ? done1 : n === 2 ? done2 : n === 3 ? done3 : false) ? 'on' : n === current ? 'now' : ''} />
+          ))}
+        </div>
+      </div>
 
-      <h3 class="step">4 · Datos del lote (opcional)</h3>
-      <label class="field">
-        <span>Proveedor (quién lo manda)</span>
-        <input data-testid="rec-supplier" autoComplete="off" autoCapitalize="words" value={supplier} onInput={(e) => setSupplier((e.target as HTMLInputElement).value)} />
-      </label>
-      {recentSuppliers.length > 0 && (
-        <div class="chips small" role="group" aria-label="Proveedores recientes" data-testid="rec-supplier-chips">
-          {recentSuppliers.map((s) => (
-            <button type="button" key={s} class={referenceKey(s) === referenceKey(supplier) ? 'chip active' : 'chip'} data-testid="rec-supplier-chip" onClick={() => setSupplier(s)}>
-              {s}
+      <section class={`rec-step${current === 1 ? ' cur' : ''}`} ref={productBlock}>
+        {stepHead({ n: 1, done: done1, open: !shut1, foldable: true, children: selectedLine })}
+        <div id="rec-step-1-body" class="rec-body" hidden={shut1}>
+          {products.length === 0 ? (
+            <div class="rec-empty" data-testid="rec-sin-productos">
+              <p class="rec-empty-title">Agrega tu primer producto</p>
+              <p class="hint">
+                Para recibir mercancía primero da de alta lo que vendes (se recibe por kilo). El precio puede quedar «Sin precio
+                todavía».
+              </p>
+            </div>
+          ) : (
+            <>
+              {!selected && !touched && (
+                <p class="hint" data-testid="rec-pick-hint">
+                  Toca el producto que llegó.
+                </p>
+              )}
+              <div class="rec-products">
+                <ProductChips
+                  products={products}
+                  selectedId={selected?.id}
+                  onSelect={pickProduct}
+                  onClear={() => setProductId('')}
+                  testids={{ variety: 'rec-variety', cls: 'rec-class' }}
+                  allowEmpty
+                  requireClass
+                />
+              </div>
+            </>
+          )}
+        </div>
+        <button
+          class={products.length === 0 ? 'primary rec-first' : 'link rec-newprod'}
+          data-testid="rec-new-class-toggle"
+          onClick={() => setShowNewClass(true)}
+        >
+          {products.length === 0 ? '＋ Agregar mi primer producto' : '＋ ¿No está? Agregar producto nuevo'}
+        </button>
+      </section>
+
+      <section class={`rec-step${current === 2 ? ' cur' : ''}`}>
+        {stepHead({ n: 2, done: done2 })}
+        <div class="chips rec-seg" role="group" aria-label="Presentación: cómo llegó">
+          {PACKAGINGS.map((pk) => (
+            <button
+              type="button"
+              key={pk}
+              role="radio"
+              aria-checked={packaging === pk}
+              class={packaging === pk ? 'chip active' : 'chip'}
+              data-testid={`rec-pack-${pk}`}
+              onClick={() => pickPackaging(pk)}
+            >
+              {PACKAGING_LABEL[pk]}
             </button>
           ))}
         </div>
-      )}
-      <label class="field">
-        <span>Camión o referencia</span>
-        <input data-testid="rec-reference" autoComplete="off" autoCapitalize="characters" value={reference} onInput={(e) => setReference((e.target as HTMLInputElement).value)} />
-      </label>
-      <label class="field">
-        <span>Fecha y hora de llegada</span>
-        <input
-          type="datetime-local"
-          data-testid="rec-datetime"
-          max={toLocalInput(new Date())}
-          value={whenText}
-          onInput={(e) => {
-            whenEdited.current = true;
-            setWhenText((e.target as HTMLInputElement).value);
-          }}
-        />
-      </label>
-      <div class="chips small" role="group" aria-label="Atajos de fecha">
-        <button type="button" class="chip" data-testid="rec-date-now" onClick={() => ((whenEdited.current = false), setWhenText(toLocalInput(new Date())))}>
-          Ahora
-        </button>
-        <button type="button" class="chip" data-testid="rec-date-yesterday" onClick={() => setWhen(new Date(Date.now() - 24 * 3600 * 1000))}>
-          Ayer
-        </button>
-      </div>
-      {dateNote && (
-        <p class="hint" data-testid="rec-date-hint">
-          {dateNote}
-        </p>
-      )}
-      <label class="field">
-        <span>Observaciones</span>
-        <input data-testid="rec-notes" autoComplete="off" value={notes} onInput={(e) => setNotes((e.target as HTMLInputElement).value)} />
-      </label>
+      </section>
+
+      <section class={`rec-step${current === 3 ? ' cur' : ''}`}>
+        {stepHead({
+          n: 3,
+          done: done3,
+          open: !shut3,
+          foldable: true,
+          children: done3 && (
+            <>
+              <strong>{kgOf(net.netMilli)}</strong>
+              {weightDetail() && ` · ${weightDetail()}`}
+            </>
+          ),
+        })}
+        <div id="rec-step-3-body" class="rec-body" hidden={shut3}>
+          <div class="rec-modes" role="group" aria-label="Cómo capturar el peso">
+            <button
+              type="button"
+              role="radio"
+              aria-checked={mode === 'directo'}
+              class={mode === 'directo' ? 'chip rec-mode-main active' : 'chip rec-mode-main'}
+              data-testid="rec-mode-directo"
+              onClick={() => pickMode('directo')}
+            >
+              Ya tengo los kilos netos
+            </button>
+            <p class="rec-alt-q">
+              {packaging === 'granel' ? '¿Lo pesaste con todo y envase?' : `¿Quieres pesar ${noun.one} por ${noun.one}, o con todo y envase?`}
+            </p>
+            <div class="rec-alt">
+              <button
+                type="button"
+                role="radio"
+                aria-checked={mode === 'por_envase'}
+                disabled={packaging === 'granel'}
+                hidden={packaging === 'granel'}
+                class={mode === 'por_envase' ? 'chip active' : 'chip'}
+                data-testid="rec-mode-por_envase"
+                onClick={() => pickMode('por_envase')}
+              >
+                {nounCap} × kilos de cada una
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={mode === 'bruto_tara'}
+                class={mode === 'bruto_tara' ? 'chip active' : 'chip'}
+                data-testid="rec-mode-bruto_tara"
+                onClick={() => pickMode('bruto_tara')}
+              >
+                Bruto − tara
+              </button>
+            </div>
+            {mode !== 'bruto_tara' && <p class="rec-gloss">{WEIGHT_GLOSSARY}</p>}
+          </div>
+          <p class="help" data-testid="rec-mode-help">
+            {mode === 'directo'
+              ? 'Escribe los kilos de mercancía (sin caja ni costal). Si pesaste por partes, usa «Sumar varias pesadas».'
+              : mode === 'por_envase'
+                ? `Cuenta las ${noun.many} y escribe cuánto pesa (solo la mercancía) cada una. La app no supone ese peso.`
+                : WEIGHT_GLOSSARY}
+          </p>
+
+          {mode === 'directo' && !useWeighings && (
+            <label class="field rec-big">
+              <span>Kilos netos recibidos</span>
+              <input
+                ref={firstInput}
+                data-testid="rec-net-direct"
+                inputMode="decimal"
+                autoComplete="off"
+                enterKeyHint="go"
+                placeholder="0"
+                value={netText}
+                {...enter}
+                onInput={(e) => setNetText((e.target as HTMLInputElement).value)}
+              />
+            </label>
+          )}
+          {mode === 'directo' && useWeighings && (
+            <div data-testid="rec-weigh">
+              <div class="row2 weigh-add">
+                <label class="field">
+                  <span>Kilos de esta pesada</span>
+                  <input
+                    ref={weighInput}
+                    data-testid="rec-weigh-input"
+                    inputMode="decimal"
+                    autoComplete="off"
+                    enterKeyHint="done"
+                    placeholder="0"
+                    value={weighText}
+                    onInput={(e) => setWeighText((e.target as HTMLInputElement).value)}
+                    onKeyDown={(e) => e.key === 'Enter' && addWeighing()}
+                  />
+                </label>
+                <button class="primary add-weigh" data-testid="rec-weigh-add" onClick={addWeighing}>
+                  ＋ Sumar
+                </button>
+              </div>
+              <ul class="plain weigh-list">
+                {weighings.map((w, i) => (
+                  <li key={i} data-testid="rec-weigh-item">
+                    <span>
+                      Pesada {i + 1}: <strong>{kgOf(w)}</strong>
+                    </span>
+                    <button
+                      class="small"
+                      data-testid="rec-weigh-remove"
+                      aria-label={`Quitar la pesada ${i + 1}`}
+                      onClick={() => setWeighings(weighings.filter((_, k) => k !== i))}
+                    >
+                      ×
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <p class="hint" data-testid="rec-weigh-total">
+                {weighings.length} {weighings.length === 1 ? 'pesada' : 'pesadas'} = {kgOf(weighSum)}
+              </p>
+            </div>
+          )}
+          {mode === 'directo' && (
+            <button class="link" data-testid="rec-weigh-toggle" onClick={toggleWeighings}>
+              {useWeighings ? 'Capturar un solo total' : 'Sumar varias pesadas'}
+            </button>
+          )}
+
+          {mode === 'por_envase' && (
+            <div class="row2">
+              <label class="field rec-big">
+                <span>¿Cuántas {noun.many}?</span>
+                <input
+                  ref={firstInput}
+                  data-testid="rec-containers"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  enterKeyHint="next"
+                  placeholder="0"
+                  value={containersText}
+                  onInput={(e) => setContainersText((e.target as HTMLInputElement).value)}
+                />
+              </label>
+              <label class="field rec-big">
+                <span>Kilos netos por {noun.one}</span>
+                <input
+                  data-testid="rec-unit-net"
+                  inputMode="decimal"
+                  autoComplete="off"
+                  enterKeyHint="go"
+                  placeholder="0"
+                  value={unitText}
+                  {...enter}
+                  onInput={(e) => setUnitText((e.target as HTMLInputElement).value)}
+                />
+              </label>
+            </div>
+          )}
+          {mode === 'por_envase' && lastUnit !== undefined && unitText.trim() === '' && (
+            <button class="chip" data-testid="rec-use-last" onClick={() => setUnitText(milliToText(lastUnit.unitNetMilli))}>
+              Usar {kgOf(lastUnit.unitNetMilli)} por {noun.one}
+              {lastUnit.folio !== undefined && ` (lo que capturaste en R-${lastUnit.folio})`}
+            </button>
+          )}
+          {mode === 'bruto_tara' && (
+            <div class="row2">
+              <label class="field rec-big">
+                <span>Peso bruto (kg)</span>
+                <input
+                  ref={firstInput}
+                  data-testid="rec-gross"
+                  inputMode="decimal"
+                  autoComplete="off"
+                  enterKeyHint="next"
+                  placeholder="0"
+                  value={grossText}
+                  onInput={(e) => setGrossText((e.target as HTMLInputElement).value)}
+                />
+              </label>
+              <label class="field rec-big">
+                <span>Tara (kg)</span>
+                <input
+                  data-testid="rec-tare"
+                  inputMode="decimal"
+                  autoComplete="off"
+                  enterKeyHint="go"
+                  placeholder="0"
+                  value={tareText}
+                  {...enter}
+                  onInput={(e) => setTareText((e.target as HTMLInputElement).value)}
+                />
+              </label>
+            </div>
+          )}
+          {mode !== 'por_envase' && packaging !== 'granel' && (
+            <label class="field">
+              <span>¿Cuántas {noun.many}? (opcional, solo para llevar la cuenta)</span>
+              <input
+                data-testid="rec-containers"
+                inputMode="numeric"
+                autoComplete="off"
+                value={containersText}
+                onInput={(e) => setContainersText((e.target as HTMLInputElement).value)}
+              />
+            </label>
+          )}
+          {problem && (
+            <p class="notice" role="alert" data-testid="rec-input-problem">
+              {problem}
+            </p>
+          )}
+          {avg !== undefined && (
+            <p class="hint" data-testid="rec-avg">
+              Eso da {kgOf(avg)} por {noun.one} (promedio, solo informativo).
+            </p>
+          )}
+        </div>
+      </section>
+
+      <section class={`rec-step${current === 4 ? ' cur' : ''}`} onClick={onLotClick}>
+        {stepHead({ n: 4, done: false, optional: true })}
+        <label class="field">
+          <span>¿Quién lo manda?</span>
+          <input data-testid="rec-supplier" autoComplete="off" autoCapitalize="words" value={supplier} onInput={(e) => setSupplier((e.target as HTMLInputElement).value)} />
+        </label>
+        {recentSuppliers.length > 0 && (
+          <div class="chips small" role="group" aria-label="Quién lo mandó antes" data-testid="rec-supplier-chips">
+            {recentSuppliers.map((s) => (
+              <button type="button" key={s} class={referenceKey(s) === referenceKey(supplier) ? 'chip active' : 'chip'} data-testid="rec-supplier-chip" onClick={() => setSupplier(s)}>
+                {s}
+              </button>
+            ))}
+          </div>
+        )}
+        <label class="field">
+          <span>Camión / nota</span>
+          <input data-testid="rec-reference" autoComplete="off" autoCapitalize="characters" value={reference} onInput={(e) => setReference((e.target as HTMLInputElement).value)} />
+        </label>
+        <label class="field">
+          <span>Fecha y hora de llegada</span>
+          <input
+            type="datetime-local"
+            data-testid="rec-datetime"
+            max={toLocalInput(new Date())}
+            value={whenText}
+            onInput={(e) => {
+              whenEdited.current = true;
+              setWhenText((e.target as HTMLInputElement).value);
+            }}
+          />
+        </label>
+        <div class="chips small" role="group" aria-label="Atajos de fecha">
+          <button type="button" class="chip" data-testid="rec-date-now" onClick={() => ((whenEdited.current = false), setWhenText(toLocalInput(new Date())))}>
+            Ahora
+          </button>
+          <button type="button" class="chip" data-testid="rec-date-yesterday" onClick={() => setWhen(new Date(Date.now() - 24 * 3600 * 1000))}>
+            Ayer
+          </button>
+        </div>
+        {dateNote && (
+          <p class="hint" data-testid="rec-date-hint">
+            {dateNote}
+          </p>
+        )}
+        <label class="field">
+          <span>Observaciones</span>
+          <input data-testid="rec-notes" autoComplete="off" value={notes} onInput={(e) => setNotes((e.target as HTMLInputElement).value)} />
+        </label>
+      </section>
 
       {touched && confirmErrors.length > 0 && (
         <div class="notice" data-testid="rec-missing">
@@ -889,7 +1049,7 @@ export function RecepcionNueva({ active, loadDraft, onDraftLoaded, onGoDrafts }:
 
       <div class="actions two">
         <button data-testid="rec-save-draft" aria-disabled={draftErrors.length > 0} onClick={saveDraft}>
-          Guardar borrador
+          Guardar para después
         </button>
         <button data-testid="rec-clear" onClick={clearAll}>
           {clearArmed ? 'Toca otra vez' : 'Limpiar'}
@@ -898,20 +1058,20 @@ export function RecepcionNueva({ active, loadDraft, onDraftLoaded, onGoDrafts }:
       <p class="hint" data-testid="rec-draft-hint">
         {draftErrors.length > 0 && touched
           ? `Para guardar un borrador: ${draftErrors[0].replace(/^El borrador está vacío: /, '').toLowerCase()}`
-          : 'El borrador NO suma al inventario. Úsalo si todavía no tienes el peso o quieres dejarlo para después; para sumar toca «Registrar recepción».'}
+          : '«Guardar para después» la deja en «Pendientes» como borrador y NO suma al inventario (por ejemplo, si aún no tienes el peso). Para sumar toca «Registrar entrada».'}
       </p>
       {latest && (
         <div class="last" data-testid="rec-last">
           Última registrada: R-{latest.folio} · {latest.productLabel} · {kgOf(currentNetMilli(latest))} · {fmtDateTime(latest.confirmedAt!)}
           <div class="actions">
             <button class="small" data-testid="rec-same-truck" onClick={sameTruck}>
-              ＋ Otra clasificación del mismo camión
+              ＋ Otro producto del mismo camión
             </button>
           </div>
         </div>
       )}
 
-      <div class="dock" data-testid="rec-dock">
+      <div class="dock rec-dock" data-testid="rec-dock">
         <div class="dock-net">
           <strong data-testid="rec-net" data-milli={net.ok ? net.netMilli : ''}>
             {net.ok ? kgOf(net.netMilli) : '—'}
@@ -921,13 +1081,13 @@ export function RecepcionNueva({ active, loadDraft, onDraftLoaded, onGoDrafts }:
           </small>
         </div>
         <button class="confirm" data-testid="rec-confirm" aria-disabled={confirmErrors.length > 0 || saving} onClick={openConfirm}>
-          Registrar recepción
+          Registrar entrada
         </button>
       </div>
 
       {showNewClass && (
         <Sheet
-          title="Nueva clasificación"
+          title="Nuevo producto"
           testid="rec-newclass-sheet"
           onClose={() => setShowNewClass(false)}
           foot={
@@ -953,7 +1113,7 @@ export function RecepcionNueva({ active, loadDraft, onDraftLoaded, onGoDrafts }:
 
       {confirming && selected && net.ok && (
         <Sheet
-          title={conflict ? 'Esa captura ya se había registrado' : 'Confirmar recepción'}
+          title={conflict ? 'Esa captura ya se había registrado' : 'Confirmar entrada'}
           testid="rec-sheet"
           onClose={saving ? undefined : () => (setConfirming(false), setConflict(null))}
           foot={
@@ -1025,7 +1185,7 @@ export function RecepcionNueva({ active, loadDraft, onDraftLoaded, onGoDrafts }:
                 </p>
               )}
               {(fields.supplier || fields.reference) && (
-                <p class="hint">{[fields.supplier, fields.reference && `ref. ${fields.reference}`].filter(Boolean).join(' · ')}</p>
+                <p class="hint">{[fields.supplier && `Lo manda: ${fields.supplier}`, fields.reference && `Camión / nota: ${fields.reference}`].filter(Boolean).join(' · ')}</p>
               )}
               <p class="hint">Llegó: {fmtDateTime(receivedDate.toISOString())}</p>
               {receivedDay !== today && (
@@ -1033,7 +1193,7 @@ export function RecepcionNueva({ active, loadDraft, onDraftLoaded, onGoDrafts }:
                   La llegada es de {dayLabel(receivedDay)}: se contará en ese día en el Resumen, pero el inventario se suma ahora.
                 </p>
               )}
-              <p class="hint">Esto sumará los kilos al inventario una sola vez. No es un pago al proveedor.</p>
+              <p class="rec-sheet-note">Esto sumará los kilos al inventario una sola vez. No es un pago al proveedor.</p>
               {warn.warnings.length > 0 && (
                 <div class="notice" role="alert" data-testid="rec-dup-warning">
                   Revisa antes de registrar:

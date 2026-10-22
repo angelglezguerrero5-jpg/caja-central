@@ -100,11 +100,11 @@ export function RecepcionHistorial({ onOpenDraft }: { onOpenDraft: (draft: Recep
   useEffect(() => {
     listProducts(db).then(setProducts);
   }, [db, version]);
-  /** Qué limón era: la etiqueta guardada al registrar o descartar; si falta (registros anteriores), la del catálogo de hoy. */
+  /** Qué producto era: la etiqueta guardada al registrar o descartar; si falta (registros anteriores), la del catálogo de hoy. */
   const labelOf = (r: Reception): string => {
     if (r.productLabel) return r.productLabel;
     const p = r.productId ? products.find((x) => x.id === r.productId) : undefined;
-    return p ? productLabel(p) : 'Sin tipo de limón';
+    return p ? productLabel(p) : 'Sin producto elegido';
   };
 
   const q = normalizeKey(search);
@@ -231,7 +231,7 @@ export function RecepcionHistorial({ onOpenDraft }: { onOpenDraft: (draft: Recep
         ))}
       </div>
       <label class="field">
-        <span>Buscar (proveedor, camión, tipo de limón o folio)</span>
+        <span>Buscar (quién lo manda, camión, producto o folio)</span>
         <input
           type="search"
           data-testid="rec-search"
@@ -361,7 +361,7 @@ export function RecepcionHistorial({ onOpenDraft }: { onOpenDraft: (draft: Recep
             {open === 'datos' && (
               <div class="inline-form" data-testid="rec-data-form">
                 <p class="hint">
-                  Corrige fecha, proveedor, referencia, observaciones o cantidad de envases. No cambia los kilos ni el inventario; queda
+                  Corrige fecha, quién lo manda, camión / nota, observaciones o cantidad de envases. No cambia los kilos ni el inventario; queda
                   el antes y el después con tu motivo.
                 </p>
                 <label class="field">
@@ -369,11 +369,11 @@ export function RecepcionHistorial({ onOpenDraft }: { onOpenDraft: (draft: Recep
                   <input type="datetime-local" data-testid="rec-data-when" max={toLocalInput(new Date())} value={eWhen} onInput={(e) => setEWhen((e.target as HTMLInputElement).value)} />
                 </label>
                 <label class="field">
-                  <span>Proveedor</span>
+                  <span>¿Quién lo manda?</span>
                   <input data-testid="rec-data-supplier" maxLength={120} value={eSupplier} onInput={(e) => setESupplier((e.target as HTMLInputElement).value)} />
                 </label>
                 <label class="field">
-                  <span>Camión o referencia</span>
+                  <span>Camión / nota</span>
                   <input data-testid="rec-data-reference" maxLength={60} value={eReference} onInput={(e) => setEReference((e.target as HTMLInputElement).value)} />
                 </label>
                 <label class="field">
@@ -400,7 +400,7 @@ export function RecepcionHistorial({ onOpenDraft }: { onOpenDraft: (draft: Recep
               <div class="inline-form" data-testid="rec-void-form">
                 <p class="hint">
                   Se restan {formatQty(net, 'kg')} del inventario con un movimiento de anulación (queda registrado). Si solo te
-                  equivocaste de tipo de limón, usa «Anular y copiar a borrador»: se anula y se prepara una nueva con los mismos
+                  equivocaste de producto, usa «Anular y copiar a borrador»: se anula y se prepara una nueva con los mismos
                   datos para que elijas el correcto.
                 </p>
                 <label class="field">
@@ -422,7 +422,7 @@ export function RecepcionHistorial({ onOpenDraft }: { onOpenDraft: (draft: Recep
                     onClick={() =>
                       run(
                         (neg, ack) => voidAndCopyToDraft(db, r.id, reason, neg, ack).then(({ draft }) => onOpenDraft(draft)),
-                        `R-${r.folio} anulada: completa el borrador con el tipo de limón correcto`,
+                        `R-${r.folio} anulada: completa el borrador con el producto correcto`,
                       )
                     }
                   >

@@ -820,7 +820,7 @@ test.describe('Reinicio real del navegador (caso 17)', () => {
 
       // Lo que se VE: historial con los mismos folios y kilos, borrador y última registrada
       await tab(page, 'recepcion');
-      await expect(page.getByTestId('rec-sub-borradores')).toHaveText('Borradores (1)');
+      await expect(page.getByTestId('rec-sub-borradores')).toHaveText('Pendientes (1)');
       await page.getByTestId('rec-sub-historial').click();
       await expect(page.getByTestId('rec-row')).toHaveCount(3);
       await expect(page.getByTestId('rec-hist-total')).toContainText('3 recepciones registradas · 630 kg en total');

@@ -1,0 +1,99 @@
+/* ===== Recepción de mercancía =====
+   Solo variables del tema (con respaldo oscuro por si aún no existen). Táctiles ≥ 44 px, campos ≥ 16 px (Safari no hace
+   zoom), sin desbordar a 360 px. */
+
+/* ---- sub-pestañas con ícono (2 × 2) ---- */
+.tabs-state.rec-subtabs button {
+  display: flex; align-items: center; justify-content: flex-start; gap: 8px;
+  min-height: 52px; padding: 6px 10px; font-size: .95rem; text-align: left;
+}
+.tabs-state.rec-subtabs button > span { min-width: 0; overflow-wrap: anywhere; }
+.rec-ico {
+  flex: 0 0 auto; width: 22px; height: 22px;
+  fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+}
+.tabs-state.rec-subtabs button.has-count:not(.active) { border-color: var(--accent, #ff9f1c); color: var(--accent, #ff9f1c); font-weight: 700; }
+
+/* ---- indicador de progreso ---- */
+.rec-progress { margin: 8px 0 4px; }
+.rec-progress p { margin: 0 0 6px; font-size: .95rem; color: var(--text, #f3f6ff); overflow-wrap: anywhere; }
+.rec-progress strong { color: var(--accent, #ff9f1c); }
+.rec-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.rec-bar span { height: 6px; border-radius: 99px; background: var(--line, #3a4663); }
+.rec-bar span.on { background: var(--ok, #2ee59d); }
+.rec-bar span.now { background: var(--accent, #ff9f1c); }
+
+/* ---- cada paso ---- */
+.rec-step {
+  margin: 10px 0; padding: 4px 12px 8px; min-width: 0;
+  background: var(--card, #1a2236); border: 1px solid var(--line, #3a4663); border-radius: 12px;
+}
+.rec-step.cur { border-color: var(--accent, #ff9f1c); box-shadow: inset 4px 0 0 var(--accent, #ff9f1c); }
+.rec-h { margin: 4px 0; font-size: 1.05rem; }
+.rec-head {
+  display: flex; align-items: flex-start; gap: 10px; width: 100%; min-width: 0; min-height: 52px;
+  padding: 6px 2px; text-align: left; font: inherit; font-weight: 700; color: var(--text, #f3f6ff);
+}
+.rec-head.static { padding: 6px 2px; }
+.rec button.rec-head { background: transparent; border: 0; border-radius: 10px; }
+.rec button.rec-head:focus-visible { outline: 3px solid var(--focus, #ffe066); outline-offset: 2px; }
+.rec-head-txt { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.rec-q { overflow-wrap: anywhere; }
+.rec-q small { font-weight: 400; color: var(--muted, #a9b4d0); }
+.rec-ans { font-weight: 400; font-size: .95rem; color: var(--text, #f3f6ff); overflow-wrap: anywhere; }
+.rec-ans strong { font-weight: 800; }
+.rec-ans-more { color: var(--muted, #a9b4d0); font-size: .85rem; }
+.rec-num {
+  flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: 99px; font-size: .95rem; font-weight: 800;
+  border: 2px solid var(--line-strong, #7886ab); color: var(--muted, #a9b4d0);
+}
+.rec-num.now { border-color: var(--accent, #ff9f1c); background: var(--accent, #ff9f1c); color: var(--on-accent, #0e1320); }
+.rec-num.done { border-color: var(--ok, #2ee59d); background: var(--ok, #2ee59d); color: var(--on-accent, #0e1320); }
+.rec-edit {
+  flex: 0 0 auto; padding: 6px 10px; border-radius: 99px; font-size: .85rem; font-weight: 700;
+  border: 1px solid var(--line-strong, #7886ab); color: var(--accent, #ff9f1c); background: var(--card-2, #222c44);
+}
+.rec-head > .rec-num { margin-top: 0; }
+.rec-head > .rec-edit { align-self: center; }
+.rec-body[hidden] { display: none; }
+
+/* Paso 1: un botón grande por producto (2 columnas a 360 px). */
+.rec .rec-products .chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 140px), 1fr)); gap: 8px; }
+.rec .rec-products .chips .chip {
+  min-height: 60px; width: 100%; border-radius: 12px; padding: 8px 10px;
+  font-size: 1.05rem; font-weight: 700; line-height: 1.2;
+}
+.rec .rec-products .chips.small .chip { min-height: 52px; font-size: .95rem; }
+.rec-newprod { display: block; }
+.rec-empty { padding: 4px 0; }
+.rec-empty-title { margin: 6px 0 2px; font-size: 1.15rem; font-weight: 800; color: var(--text, #f3f6ff); }
+.rec button.rec-first { width: 100%; min-height: 56px; margin: 8px 0 4px; font-size: 1.05rem; }
+
+/* Paso 2: la presentación es una sola línea de tres botones. */
+.rec .chips.rec-seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 4px 0 6px; }
+.rec .chips.rec-seg .chip { width: 100%; min-width: 0; min-height: 52px; border-radius: 10px; padding: 6px 4px; font-size: .95rem; }
+
+/* Paso 3: los kilos netos primero y en grande; las otras dos formas, debajo y más discretas. */
+.rec-modes { margin: 2px 0 4px; }
+.rec .rec-modes .chip { border-radius: 10px; }
+.rec .rec-modes .chip.rec-mode-main { display: block; width: 100%; min-height: 56px; font-size: 1.05rem; font-weight: 700; }
+.rec-alt-q { margin: 10px 0 4px; font-size: .9rem; color: var(--muted, #a9b4d0); overflow-wrap: anywhere; }
+.rec-alt { display: flex; flex-wrap: wrap; gap: 6px; }
+.rec .rec-alt .chip { flex: 1 1 140px; min-width: 0; min-height: 48px; font-size: .9rem; padding: 6px 10px; }
+.rec .rec-alt .chip[hidden] { display: none; }
+.rec-gloss { margin: 6px 0 0; font-size: .8rem; color: var(--muted, #a9b4d0); overflow-wrap: anywhere; }
+.rec-big input { font-size: 1.6rem; font-weight: 700; }
+.rec .field input { font-size: max(16px, 1em); }
+.rec .field.rec-big input, .rec .row2 input { font-size: 1.6rem; }
+
+/* ---- barra inferior: resumen vivo arriba, kilos en grande ---- */
+.rec .rec-dock .dock-net { display: flex; flex-direction: column-reverse; }
+.rec .rec-dock .dock-net small { color: var(--text, #f3f6ff); font-size: .85rem; }
+.rec .rec-dock .dock-net small.warn { color: var(--danger, #ff5d6c); }
+
+/* ---- hoja de confirmar ---- */
+.rec-sheet-note {
+  margin: 10px 0 4px; padding: 8px 12px; border-radius: 10px; font-weight: 700;
+  background: var(--card-2, #222c44); border: 1px solid var(--line-strong, #7886ab); color: var(--text, #f3f6ff);
+}

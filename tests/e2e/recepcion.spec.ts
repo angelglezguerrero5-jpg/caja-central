@@ -537,7 +537,7 @@ test.describe('Recepción · borradores y peso desconocido (caso 13)', () => {
     await test.step('contador en la pestaña y en la subpestaña; el inventario sigue en cero', async () => {
       await expect(page.getByTestId('menu-count')).toHaveText('1');
       await expect(page.getByTestId('menu-btn')).toHaveAttribute('aria-label', 'Más secciones, 1 borrador pendiente');
-      await expect(page.getByTestId('rec-sub-borradores')).toHaveText('Borradores (1)');
+      await expect(page.getByTestId('rec-sub-borradores')).toHaveText('Pendientes (1)');
       await expectStock(page, 'semilla', { physical: '0 g', available: '0 g' });
       await expect(invRow(page, 'semilla').getByTestId('stock-recibido')).toHaveCount(0); // ni un movimiento
     });
@@ -592,7 +592,7 @@ test.describe('Recepción · borradores y peso desconocido (caso 13)', () => {
     await register(page, 'Recepción R-1 registrada: +730 kg');
 
     await expect(page.getByTestId('menu-count')).toHaveCount(0);
-    await expect(page.getByTestId('rec-sub-borradores')).toHaveText('Borradores');
+    await expect(page.getByTestId('rec-sub-borradores')).toHaveText('Pendientes');
     await subTab(page, 'borradores');
     await expect(page.getByTestId('rec-draft-row')).toHaveCount(0);
     await expect(page.getByTestId('rec-borradores')).toContainText('No hay borradores.');
@@ -1822,7 +1822,7 @@ test.describe('Recepción · negativos de captura (kilos inválidos, negativos, 
     await page.getByTestId('rec-save-draft').click();
     await expect(toast(page)).toContainText('Borrador guardado (aún sin peso neto): no suma al inventario');
     await subTab(page, 'borradores');
-    await expect(page.getByTestId('rec-draft-row')).toContainText('Sin tipo de limón elegido');
+    await expect(page.getByTestId('rec-draft-row')).toContainText('Sin producto elegido');
     await expect(page.getByTestId('rec-draft-row')).toContainText('Rancho Sur');
     const d = await readDb(page);
     expect(byStatus(d, 'borrador')).toHaveLength(1);

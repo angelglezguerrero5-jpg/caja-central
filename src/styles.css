@@ -1,9 +1,35 @@
 :root {
-  --green: #2f7d32; --green-dark: #1b5e20; --lemon: #fdd835; --bg: #f4f7f0; --card: #fff;
-  --text: #1c2b1d; --muted: #4f5d50; --danger: #b71c1c;
-  /* --line: separadores decorativos · --line-strong: bordes de controles (contraste ≥ 3:1 también al sol) */
-  --line: #d5dfd0; --line-strong: #7a8b7c;
-  --amber-bg: #fff4d1; --amber-line: #c9a400;
+  /* ===== TEMA OSCURO · paleta (úsala desde cualquier .css de la app; no escribas colores a mano) =====
+     Contraste medido (WCAG): texto ≥ 4.5:1 contra su fondo real; bordes de controles ≥ 3:1.
+     --bg          fondo de la página                          #0e1320
+     --bar         barra superior, pestañas, barra de registro  #121a2c
+     --card        tarjetas, hojas, menú                        #1a2236
+     --card-2      superficie elevada: botones, campos, filas   #222c44
+     --line        separadores DECORATIVOS (no para controles)  #3a4663
+     --line-strong bordes de controles y tarjetas inactivas     ≥ 3.8:1 contra --card y --card-2
+     --text        texto principal (casi blanco: se lee mejor al sol)
+     --muted       texto secundario (≥ 6.7:1 contra --card-2)
+     --accent      ACENTO naranja: botón principal, chip/pestaña/sub-pestaña activa, enlaces
+     --on-accent   texto SOBRE --accent, --ok y --danger rellenos
+     --ok          verde dinero / correcto     · --ok-bg: fondo suave verde (texto --text u --ok encima)
+     --danger      rojo error / gasto / anular · --danger-bg: fondo suave rojo (texto --text o --danger encima)
+     --warn-bg, --warn-line   avisos (.notice) y el cambio a devolver
+     --focus       contorno del foco del teclado
+     --disabled-bg, --disabled-text, --disabled-line   controles deshabilitados (texto ≥ 9:1, se ven apagados por el fondo)
+     --highlight-bg           fila destacada de reportes (con barra --accent a la izquierda) */
+  --bg: #0e1320; --bar: #121a2c; --card: #1a2236; --card-2: #222c44;
+  --line: #3a4663; --line-strong: #7886ab;
+  --text: #f3f6ff; --muted: #a9b4d0;
+  --accent: #ff9f1c; --on-accent: #0e1320;
+  --ok: #2ee59d; --ok-bg: #0f3a2c;
+  --danger: #ff5d6c; --danger-bg: #3a1822;
+  --warn-bg: #2e2614; --warn-line: #c98a1a;
+  --focus: #ffe066;
+  --disabled-bg: #151b29; --disabled-text: #b4bdd4; --disabled-line: #4a5573; --disabled-danger: #f0a0a8;
+  --highlight-bg: #33270f; --pending-bg: #2a3246; --inactive-bg: #121826;
+  /* Nombres del tema claro anterior: se conservan como alias por compatibilidad. No los uses en código nuevo. */
+  --green: var(--accent); --green-dark: var(--accent); --lemon: var(--accent);
+  --amber-bg: var(--warn-bg); --amber-line: var(--warn-line);
   /* Zonas seguras (muesca / isla dinámica / barra de inicio del iPhone; 0 en teléfonos sin ellas). Se leen UNA vez aquí:
      las pruebas las simulan con documentElement.style.setProperty('--sat', '59px'), porque env() no se puede forzar. */
   --sat: env(safe-area-inset-top, 0px); --sar: env(safe-area-inset-right, 0px);
@@ -11,7 +37,8 @@
   /* Altura que el teclado TAPA sin encoger la ventana (Safari de iPhone). La escribe src/ui/keyboard.ts; en Android es 0
      porque allí el teclado encoge la ventana. Lo usan las barras y hojas ancladas abajo para quedar SOBRE el teclado. */
   --kb: 0px;
-  color-scheme: light;
+  color-scheme: dark;
+  accent-color: var(--accent);
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 /* Safari de iPhone: sin esto un doble toque rápido (billetes, +/−) hace zoom, y al girar el teléfono agranda el texto. */
@@ -19,29 +46,29 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; touch-action: man
 html, body { margin: 0; background: var(--bg); color: var(--text); overscroll-behavior-y: none;
   font: 17px/1.35 system-ui, -apple-system, Roboto, sans-serif; }
 body { padding-bottom: calc(12px + var(--sab)); }
-/* Franja verde detrás de la barra de estado del iPhone: el encabezado ya la cubre, pero las pantallas sin encabezado
-   (cargando, error fatal) también deben dejar legible la hora y la batería (texto blanco). Con zona segura 0 mide 0. */
-body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: var(--sat); background: var(--green); z-index: 4; pointer-events: none; }
+/* Franja del color de la barra superior detrás de la barra de estado del iPhone: el encabezado ya la cubre, pero las pantallas
+   sin encabezado (cargando, error fatal) también deben dejar legible la hora y la batería (texto blanco). Con zona segura 0 mide 0. */
+body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: var(--sat); background: var(--bar); z-index: 4; pointer-events: none; }
 button, .tab, .chip { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
 h2 { margin: 8px 0; font-size: 1.25rem; } h3 { margin: 18px 0 6px; font-size: 1.05rem; }
 h4 { margin: 14px 0 4px; font-size: .95rem; }
 .topbar { position: sticky; top: 0; z-index: 5; }
 .top { display: flex; justify-content: space-between; align-items: center;
-  gap: 8px; padding: calc(10px + var(--sat)) calc(14px + var(--sar)) 10px calc(14px + var(--sal)); background: var(--green); color: #fff; }
+  gap: 8px; padding: calc(10px + var(--sat)) calc(14px + var(--sar)) 10px calc(14px + var(--sal)); background: var(--bar); color: var(--text); }
 .net { font-size: .8rem; padding: 3px 8px; border-radius: 99px; background: rgba(0,0,0,.28); white-space: nowrap; }
-.net.off { background: var(--lemon); color: #3b3300; font-weight: 600; }
+.net.off { background: var(--accent); color: var(--on-accent); font-weight: 600; }
 main { padding: 12px calc(14px + var(--sar)) 12px calc(14px + var(--sal)); max-width: 560px; margin: 0 auto; overflow-x: clip; }
 
 /* ---- navegación inferior (6 pestañas a 360 px) ---- */
-.tabs { display: flex; background: #fff; border-bottom: 1px solid var(--line-strong); padding: 0 var(--sar) 0 var(--sal); }
+.tabs { display: flex; background: var(--bar); border-bottom: 1px solid var(--line); padding: 0 var(--sar) 0 var(--sal); }
 .tab { position: relative; flex: 1 1 auto; min-width: 48px; min-height: 56px; border: 0; border-radius: 0; background: none;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
-  padding: 4px 3px; font-size: .75rem; line-height: 1.1; font-weight: 600; color: #4a574b; }
-.tab.active { background: #e3f1e1; color: var(--green-dark); box-shadow: inset 0 -3px 0 var(--green); }
+  padding: 4px 3px; font-size: .75rem; line-height: 1.1; font-weight: 600; color: var(--muted); }
+.tab.active { background: var(--card); color: var(--accent); box-shadow: inset 0 -3px 0 var(--accent); }
 .tab .ico { font-size: 1.2rem; line-height: 1; }
 .tab .lbl { max-width: 100%; white-space: nowrap; }
 .tab .count { position: absolute; top: 2px; left: calc(50% + 6px); min-width: 18px; height: 18px; padding: 0 4px; border-radius: 99px;
-  background: var(--danger); color: #fff; font-size: .7rem; line-height: 18px; text-align: center; font-weight: 700; }
+  background: var(--danger); color: var(--on-accent); font-size: .7rem; line-height: 18px; text-align: center; font-weight: 700; }
 /* Con el teclado abierto la barra estorba más de lo que ayuda. La clase kbd la pone y la quita src/ui/keyboard.ts con retraso
    (no :has(:focus)): si el diseño cambiara en el mismo instante en que el campo pierde el foco, el botón tocado se movería
    y el toque se perdería. El relleno inferior del cuerpo NO cambia, para que nada se desplace al enfocar o desenfocar. */
@@ -53,32 +80,35 @@ html.kbd { scroll-padding-bottom: 96px; }
 
 /* ---- controles ---- */
 button { font: inherit; min-height: 48px; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--line-strong);
-  background: #fff; color: var(--text); }
-button:disabled, button[aria-disabled="true"] { background: #e3e9e2; color: #3d4a3e; border-color: #9aa89b; }
+  background: var(--card-2); color: var(--text); }
+/* Deshabilitado: fondo hundido (casi el de la página), borde tenue y texto aún legible (≥ 9:1). Sin opacity. */
+button:disabled, button[aria-disabled="true"] { background: var(--disabled-bg); color: var(--disabled-text); border-color: var(--disabled-line); }
 button:disabled { cursor: not-allowed; }
-button.primary, .confirm { background: var(--green); color: #fff; border-color: var(--green-dark); font-weight: 700; }
-button.primary:disabled, .confirm:disabled, .confirm[aria-disabled="true"] { background: #d9e2d8; color: #33402f; border-color: #9aa89b; }
-button.danger { color: var(--danger); border-color: var(--danger); }
-button.danger:disabled { color: #6b3b3b; }
+button.primary, .confirm { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; }
+button.primary:disabled, .confirm:disabled, .confirm[aria-disabled="true"] { background: var(--disabled-bg); color: var(--disabled-text); border-color: var(--disabled-line); }
+button.danger { background: var(--danger); color: var(--on-accent); border-color: var(--danger); font-weight: 700; }
+button.danger:disabled { background: var(--disabled-bg); color: var(--disabled-danger); border-color: var(--disabled-line); }
 button.small { min-height: 44px; min-width: 44px; padding: 4px 10px; font-size: .9rem; }
 .confirm { width: 100%; min-height: 62px; font-size: 1.25rem; margin-top: 12px; }
-:focus-visible { outline: 3px solid var(--green-dark); outline-offset: 2px; }
-input:focus-visible, select:focus-visible { outline: 3px solid var(--lemon); border-color: var(--green-dark); }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+input:focus-visible, select:focus-visible { outline: 3px solid var(--focus); border-color: var(--accent); }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
 .chip { min-height: 52px; min-width: 44px; padding: 8px 16px; border-radius: 99px; max-width: 100%; overflow-wrap: anywhere; }
-.chip.active { background: var(--lemon); border-color: #8a7400; font-weight: 700; }
+.chip.active { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; }
 .chip.muted { color: var(--muted); border-style: dashed; }
-.chip.active.muted { background: #eef2ea; color: var(--text); border-style: solid; border-color: var(--line-strong); font-weight: 600; }
-.chip:disabled { opacity: .5; }
+.chip.active.muted { background: var(--pending-bg); color: var(--text); border-style: solid; border-color: var(--line-strong); font-weight: 600; }
+.chip:disabled { border-style: dashed; }
 .chips.small .chip { min-height: 48px; font-size: .9rem; padding: 6px 12px; }
 .field { display: block; margin: 8px 0; flex: 1; min-width: 0; }
 .field span { display: block; font-size: .85rem; color: var(--muted); margin-bottom: 2px; }
 /* font: inherit = 17 px. Safari de iPhone hace zoom al enfocar un campo con letra menor de 16 px: ningún campo debe bajar de ahí. */
 input, select { width: 100%; font: inherit; min-height: 52px; padding: 8px 12px; border-radius: 10px;
-  border: 2px solid var(--line-strong); background: #fff; color: var(--text); }
+  border: 2px solid var(--line-strong); background: var(--card-2); color: var(--text); }
+input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
+textarea { font: inherit; border: 2px solid var(--line-strong); border-radius: 10px; background: var(--card-2); color: var(--text); }
 /* Safari de iPhone les da un ancho mínimo propio a los campos de fecha y se salen de la pantalla sin esto. */
 input[type="date"], input[type="datetime-local"] { min-width: 0; max-width: 100%; }
-input:focus, select:focus { border-color: var(--green); }
+input:focus, select:focus, textarea:focus { border-color: var(--accent); }
 .row2 { display: flex; gap: 10px; }
 .row2 input { font-size: 1.6rem; font-weight: 700; }
 .row2 input[type="date"] { font-size: 1rem; font-weight: 600; }
@@ -86,7 +116,7 @@ input:focus, select:focus { border-color: var(--green); }
 .check input { width: 26px; min-height: 26px; height: 26px; flex: none; }
 .radio { display: flex; gap: 8px; align-items: center; margin: 6px 0; min-height: 48px; }
 .radio input { width: 24px; min-height: 24px; height: 24px; }
-.link { min-height: 44px; border: 0; background: none; color: var(--green-dark); text-decoration: underline; padding: 6px 2px; text-align: left; }
+.link { min-height: 44px; border: 0; background: none; color: var(--accent); text-decoration: underline; padding: 6px 2px; text-align: left; }
 .file { display: block; margin: 14px 0; } .file span { display: block; margin-bottom: 4px; }
 
 /* ---- sub-pestañas (2×2; 3 columnas para Vales) ---- */
@@ -94,41 +124,45 @@ input:focus, select:focus { border-color: var(--green); }
 .tabs-state.n3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .tabs-state button { min-width: 0; min-height: 48px; padding: 6px 4px; font-size: .9rem; line-height: 1.15; overflow-wrap: anywhere; }
 .tabs-state.n3 button { font-size: .8rem; }
-.tabs-state button.active { background: var(--lemon); font-weight: 700; }
+.tabs-state button.active { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; }
 
 /* ---- totales ---- */
 .total, .change { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 10px 14px;
   border-radius: 12px; margin: 8px 0; }
 .total strong, .change strong { min-width: 0; text-align: right; overflow-wrap: anywhere; }
-.total { background: var(--green-dark); color: #fff; } .total strong { font-size: clamp(1.4rem, 9vw, 2.2rem); }
-.total.pending { background: #55635a; }
-.change { background: var(--amber-bg); border: 1px solid #e6d36a; } .change strong { font-size: clamp(1.25rem, 7vw, 1.7rem); }
+.total { background: var(--ok-bg); color: var(--text); border: 1px solid var(--ok); }
+.total strong { font-size: clamp(1.4rem, 9vw, 2.2rem); color: var(--ok); }
+.total.pending { background: var(--pending-bg); border-color: var(--line-strong); }
+.total.pending strong { color: var(--text); }
+.change { background: var(--warn-bg); border: 1px solid var(--warn-line); } .change strong { font-size: clamp(1.25rem, 7vw, 1.7rem); }
 .bills { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-.bill { min-height: 56px; padding-left: 4px; padding-right: 4px; min-width: 0; font-weight: 700; } .bill.exact { background: var(--lemon); }
+.bill { min-height: 56px; padding-left: 4px; padding-right: 4px; min-width: 0; font-weight: 700; }
+.bill.exact { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.bill.exact:disabled { background: var(--disabled-bg); color: var(--disabled-text); border-color: var(--disabled-line); }
 
 /* ---- textos de apoyo y avisos ---- */
 .hint { color: var(--muted); font-size: .9rem; margin: 4px 0; }
 .help { color: var(--muted); font-size: .85rem; margin: 2px 0 8px; }
-.last { background: #e8f5e9; padding: 8px 12px; border-radius: 10px; margin-top: 12px; }
+.last { background: var(--ok-bg); padding: 8px 12px; border-radius: 10px; margin-top: 12px; }
 .empty { color: var(--muted); padding: 12px 0; }
-.ok { color: var(--green-dark); font-weight: 700; }
+.ok { color: var(--ok); font-weight: 700; }
 .warn { color: var(--danger); font-weight: 700; }
 .warn-text { color: var(--danger); }
 .neg { color: var(--danger); font-weight: 700; }
-.notice { background: var(--amber-bg); border: 1px solid var(--amber-line); border-radius: 10px; padding: 8px 12px; margin: 8px 0;
+.notice { background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 10px; padding: 8px 12px; margin: 8px 0;
   color: var(--text); font-size: .95rem; }
 /* Los avisos de la aplicación (fuera de <main>) también respetan las zonas seguras laterales (teléfono en horizontal). */
 .top ~ .notice { margin-left: var(--sal); margin-right: var(--sar); }
 .notice.offline, .notice.install { font-size: .9rem; }
 .notice .actions { margin-top: 4px; }
 .notice ul { margin: 4px 0 0; }
-.step { margin: 16px 0 6px; font-size: 1rem; color: var(--green-dark); }
+.step { margin: 16px 0 6px; font-size: 1rem; color: var(--accent); }
 .big { font-size: 1.4rem; font-weight: 700; margin: 4px 0; }
 
 /* ---- tarjetas, listas, reportes ---- */
-.card { background: var(--card); border: 1px solid var(--line-strong); border-radius: 12px; padding: 10px 12px; margin: 10px 0; }
-/* Anulada / oculta: se distingue con fondo gris y borde punteado, NO con opacity (bajaba el texto a ~3.4:1; el mínimo es 4.5:1). */
-.card.inactive { background: #eceee9; border-style: dashed; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin: 10px 0; }
+/* Anulada / oculta: se distingue con fondo hundido y borde punteado, NO con opacity (bajaba el texto a ~3.4:1; el mínimo es 4.5:1). */
+.card.inactive { background: var(--inactive-bg); border-style: dashed; border-color: var(--line-strong); }
 .card header { display: flex; justify-content: space-between; gap: 8px; }
 .card ul, ul.plain { margin: 6px 0; padding-left: 18px; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
@@ -139,21 +173,24 @@ input:focus, select:focus { border-color: var(--green); }
 .inline-form.classify .field > span { font-weight: 600; color: var(--text); }
 .stock, .report { display: grid; gap: 6px; margin: 8px 0; }
 .stock { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.stock div, .report div { background: #f4f7f0; border-radius: 8px; padding: 6px 8px; min-width: 0; }
+.stock div, .report div { background: var(--card-2); border-radius: 8px; padding: 6px 8px; min-width: 0; }
 .stock dd { overflow-wrap: anywhere; }
 .report div { display: flex; justify-content: space-between; gap: 8px; }
-.report .strong { background: var(--lemon); font-weight: 700; }
+/* Fila destacada: fondo cálido + barra naranja (no relleno naranja: un saldo negativo en rojo no se leería encima). */
+.report .strong { background: var(--highlight-bg); box-shadow: inset 4px 0 0 var(--accent); font-weight: 700; }
+.report .strong dd { color: var(--accent); }
+.report .strong dd.neg { color: var(--danger); }
 .stock dt, .report dt { font-size: .75rem; color: var(--muted); } .stock dd, .report dd { margin: 0; font-weight: 700; }
 .report dt { font-size: .95rem; color: var(--text); }
 .line { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; padding: 8px 10px; margin: 4px 0;
-  background: #f4f7f0; border-radius: 8px; overflow-wrap: anywhere; }
+  background: var(--card-2); border-radius: 8px; overflow-wrap: anywhere; }
 .line > span:first-child { font-weight: 600; }
 .brow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px 8px; padding: 8px 10px; margin: 4px 0;
-  background: #f4f7f0; border-radius: 8px; overflow-wrap: anywhere; }
+  background: var(--card-2); border-radius: 8px; overflow-wrap: anywhere; }
 .brow .blabel { grid-column: 1 / -1; }
 .brow small { display: block; font-size: .72rem; color: var(--muted); font-weight: 400; }
-.badge { font-size: .75rem; padding: 2px 8px; border-radius: 99px; background: #e8f5e9; }
-.badge.cancel { background: #ffebee; color: var(--danger); }
+.badge { font-size: .75rem; padding: 2px 8px; border-radius: 99px; background: var(--ok-bg); color: var(--ok); }
+.badge.cancel { background: var(--danger-bg); color: var(--danger); }
 .weigh-list { list-style: none; padding-left: 0; }
 .weigh-list li { display: flex; justify-content: space-between; align-items: center; min-height: 48px; gap: 8px;
   border-bottom: 1px solid var(--line); }
@@ -173,7 +210,7 @@ details.fold > summary small { font-weight: 400; color: var(--muted); }
 /* ---- barra fija de registro (neto + botón) ---- */
 .dock { position: sticky; bottom: var(--sab); z-index: 4; display: flex; gap: 10px; align-items: center;
   margin: 14px calc(-14px - var(--sar)) 0 calc(-14px - var(--sal)); padding: 8px calc(14px + var(--sar)) 8px calc(14px + var(--sal));
-  background: #fff; border-top: 2px solid var(--green); box-shadow: 0 -4px 12px rgba(0,0,0,.12); }
+  background: var(--bar); border-top: 2px solid var(--accent); box-shadow: 0 -4px 12px rgba(0,0,0,.45); }
 /* Con el teclado abierto las pestañas se esconden y la barra baja al borde: en Android el borde de la ventana ES el borde del
    teclado (--kb vale 0); en Safari de iPhone la ventana no se encoge y --kb la sube justo por encima del teclado. */
 html.kbd .dock { bottom: var(--kb); }
@@ -185,22 +222,23 @@ html.kbd .dock { bottom: var(--kb); }
 /* ---- hojas (modales desde abajo) ---- */
 /* El aviso va ARRIBA, debajo del encabezado: abajo tapaba el botón principal (barra de registro, pie de las hojas). */
 .toast { position: fixed; left: calc(14px + var(--sal)); right: calc(14px + var(--sar)); top: calc(124px + var(--sat)); z-index: 30; pointer-events: none;
-  padding: 12px 14px; border-radius: 10px; background: var(--green-dark); color: #fff; text-align: center; }
+  padding: 12px 14px; border-radius: 10px; background: var(--ok); color: var(--on-accent); font-weight: 600; text-align: center;
+  box-shadow: 0 8px 24px rgba(0,0,0,.5); }
 .toast.error { background: var(--danger); }
 .loading, .fatal { padding: 24px; } .fatal { color: var(--danger); }
 .fatal button { margin: 8px 0; }
 /* El borde inferior de la hoja es el del teclado (--kb: ver :root); así sus botones nunca quedan debajo de él. */
-.overlay { position: fixed; inset: 0 0 var(--kb) 0; z-index: 20; background: rgba(0,0,0,.5); display: flex; align-items: flex-end; justify-content: center; }
-.sheet { width: 100%; max-width: 560px; max-height: 92vh; max-height: 92dvh; max-height: min(92dvh, 100%); overflow-y: auto; background: #fff;
-  border-radius: 18px 18px 0 0; padding: 18px 16px calc(18px + var(--sab)); }
+.overlay { position: fixed; inset: 0 0 var(--kb) 0; z-index: 20; background: rgba(0,0,0,.65); display: flex; align-items: flex-end; justify-content: center; }
+.sheet { width: 100%; max-width: 560px; max-height: 92vh; max-height: 92dvh; max-height: min(92dvh, 100%); overflow-y: auto; background: var(--card);
+  border-top: 1px solid var(--line-strong); border-radius: 18px 18px 0 0; padding: 18px 16px calc(18px + var(--sab)); }
 .sheet h2 { margin-top: 0; }
 .sheet.split { display: flex; flex-direction: column; overflow: hidden; padding: 0; }
 .sheet.split > h2 { margin: 0; padding: 14px 16px 6px; }
 .sheet-body { overflow-y: auto; padding: 0 16px 8px; overscroll-behavior: contain; }
-.sheet-foot { padding: 10px 16px calc(12px + var(--sab)); border-top: 1px solid var(--line); background: #fff; }
+.sheet-foot { padding: 10px 16px calc(12px + var(--sab)); border-top: 1px solid var(--line); background: var(--card); }
 .sheet-foot .actions { margin-top: 0; }
 .sheet ul { padding-left: 18px; margin: 6px 0; }
-.sheet .warn { background: #ffebee; border-radius: 8px; padding: 8px 10px; }
+.sheet .warn { background: var(--danger-bg); border-radius: 8px; padding: 8px 10px; }
 .sheet .notice { font-weight: 400; }
 .sum-total { font-size: 2.4rem; font-weight: 800; margin: 4px 0; }
 .sum-line { color: var(--text); font-weight: 700; font-size: 1.1rem; margin: 0; }
@@ -218,6 +256,8 @@ main:focus { outline: none; }
 .chip.full { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: 8px; border-radius: 12px;
   min-height: 56px; margin: 6px 0; text-align: left; }
 .chip small { color: var(--muted); font-weight: 400; }
+/* Sobre el naranja, todo el texto del chip (precio, «sin precio») va oscuro: gris o rojo no llegarían a 4.5:1. */
+.chip.active small { color: var(--on-accent); }
 .chips.recent { flex-wrap: nowrap; overflow-x: auto; align-items: center; }
 .chips.recent .chip, .chips.recent .help { flex: 0 0 auto; white-space: nowrap; }
 
@@ -239,20 +279,20 @@ main:focus { outline: none; }
 
 /* ---- menú de los tres puntos (Vales y Recepción) ---- */
 .top .net { margin-left: auto; }
-.menu-btn { position: relative; width: 48px; min-height: 48px; padding: 0; border-radius: 12px; background: rgba(255,255,255,.16);
-  border-color: rgba(255,255,255,.55); color: #fff; display: flex; align-items: center; justify-content: center; }
-.menu-btn.active { background: #fff; }
-.menu-btn.active .dots i { background: var(--green-dark); }
+.menu-btn { position: relative; width: 48px; min-height: 48px; padding: 0; border-radius: 12px; background: var(--card-2);
+  border-color: var(--line-strong); color: var(--text); display: flex; align-items: center; justify-content: center; }
+.menu-btn.active { background: var(--accent); border-color: var(--accent); }
+.menu-btn.active .dots i { background: var(--on-accent); }
 .dots { display: flex; flex-direction: column; gap: 4px; }
-.dots i { display: block; width: 5px; height: 5px; border-radius: 50%; background: #fff; }
+.dots i { display: block; width: 5px; height: 5px; border-radius: 50%; background: var(--text); }
 .menu-btn .count { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 99px;
-  background: var(--danger); color: #fff; font-size: .7rem; line-height: 18px; text-align: center; font-weight: 700; }
-.menu-backdrop { position: fixed; inset: 0; z-index: 6; background: rgba(0,0,0,.35); }
-.menu { position: absolute; z-index: 7; top: calc(100% + 4px); right: calc(10px + var(--sar)); width: min(300px, calc(100vw - 20px)); background: #fff;
-  border: 1px solid var(--line-strong); border-radius: 14px; box-shadow: 0 12px 34px rgba(0,0,0,.35); overflow: hidden; }
+  background: var(--danger); color: var(--on-accent); font-size: .7rem; line-height: 18px; text-align: center; font-weight: 700; }
+.menu-backdrop { position: fixed; inset: 0; z-index: 6; background: rgba(0,0,0,.55); }
+.menu { position: absolute; z-index: 7; top: calc(100% + 4px); right: calc(10px + var(--sar)); width: min(300px, calc(100vw - 20px)); background: var(--card);
+  border: 1px solid var(--line-strong); border-radius: 14px; box-shadow: 0 12px 34px rgba(0,0,0,.6); overflow: hidden; }
 .menu-item { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; border: 0; border-bottom: 1px solid var(--line);
-  border-radius: 0; text-align: left; font-weight: 700; }
+  border-radius: 0; text-align: left; font-weight: 700; background: var(--card); }
 .menu-item:last-child { border-bottom: 0; }
-.menu-item.active { background: #e3f1e1; color: var(--green-dark); }
-.menu-item .count.inline { margin-left: auto; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 99px; background: var(--danger); color: #fff;
+.menu-item.active { background: var(--card-2); color: var(--accent); box-shadow: inset 4px 0 0 var(--accent); }
+.menu-item .count.inline { margin-left: auto; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 99px; background: var(--danger); color: var(--on-accent);
   font-size: .75rem; line-height: 22px; text-align: center; }

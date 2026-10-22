@@ -39,8 +39,9 @@ interface Props {
 }
 
 /**
- * Alta / edición de una clasificación de limón: variedad · origen · calidad · calibre · unidad · precio.
- * La app NO trae variedades ni precios de ejemplo. Todo se puede dejar sin especificar salvo la variedad.
+ * Alta / edición de un producto (chayote, jitomate, limón…) con su clasificación: producto · origen · calidad · calibre ·
+ * unidad · precio. La app NO trae productos ni precios de ejemplo. Todo se puede dejar sin especificar salvo el producto.
+ * Una fila de atajos sin opciones no se muestra (sería una fila vacía o con un solo «No especificado» que confunde).
  * Los chips (presets y valores ya usados, como "Torreones") solo rellenan los campos de texto.
  */
 export function NuevaVariedad({ initial, onSaved, onCancel, idPrefix = 'new', fixedUnit, defaultNoPrice }: Props) {
@@ -97,8 +98,8 @@ export function NuevaVariedad({ initial, onSaved, onCancel, idPrefix = 'new', fi
     }
   }
 
-  // Los valores propios (ej. «Torreones») solo se sugieren dentro de la variedad en la que ya se usaron; los atajos
-  // confirmados (Primera, 2X, Oaxaca…) valen para todas. Así nada se «hereda» a otra variedad sin que lo decidas.
+  // Los valores propios (ej. «Extra») solo se sugieren dentro del producto en el que ya se usaron; los atajos
+  // confirmados (Primera, Chico…) valen para todos. Así nada se «hereda» a otro producto sin que lo decidas.
   const known = knownValues(all);
   const sameVariety = (p: Product) => varietyKey(name) === '' || varietyKey(p.name) === varietyKey(name);
   const inVariety = knownValues(all.filter(sameVariety));
@@ -106,6 +107,9 @@ export function NuevaVariedad({ initial, onSaved, onCancel, idPrefix = 'new', fi
   const customOrigins = customValues(inVariety.origins, ORIGIN_PRESETS);
   const customQualities = customValues(inVariety.qualities, QUALITY_PRESETS);
   const customCalibers = customValues(inVariety.calibers, [...SIZE_PRESETS, ...CALIBER_NUMBER_PRESETS], caliberKey);
+  const varietyOptions = [...VARIETY_PRESETS, ...customVarieties];
+  // Los calibres numéricos ya no traen atajos: la fila «Calibre» solo aparece cuando hay calibres propios ya usados.
+  const caliberOptions = [...CALIBER_NUMBER_PRESETS, ...customCalibers];
 
   // Vista previa de cómo quedará y aviso de duplicado ANTES de guardar. Se calcula con la MISMA función que usa el guardado
   // (alias, «no especificado», ortografía de los atajos), así la vista previa dice exactamente lo que se va a guardar.
@@ -120,19 +124,21 @@ export function NuevaVariedad({ initial, onSaved, onCancel, idPrefix = 'new', fi
   return (
     <div class="inline-form classify" data-testid={id('variety')}>
       <div class="field">
-        <span>Tipo de limón (variedad)</span>
-        <ChipRow
-          label="Variedad"
-          testid={id('chips-variety')}
-          options={[...VARIETY_PRESETS, ...customVarieties]}
-          value={name}
-          keyFn={varietyKey}
-          onPick={setName}
-        />
+        <span>Producto</span>
+        {varietyOptions.length > 0 && (
+          <ChipRow
+            label="Producto"
+            testid={id('chips-variety')}
+            options={varietyOptions}
+            value={name}
+            keyFn={varietyKey}
+            onPick={setName}
+          />
+        )}
         <input
           data-testid={id('name')}
-          aria-label="Tipo de limón, escribirlo"
-          placeholder="Sin semilla, Con semilla u otra…"
+          aria-label="Producto, escribirlo"
+          placeholder="Chayote, Jitomate, Limón…"
           value={name}
           {...text}
           onInput={(e) => setName((e.target as HTMLInputElement).value)}
@@ -140,7 +146,7 @@ export function NuevaVariedad({ initial, onSaved, onCancel, idPrefix = 'new', fi
       </div>
 
       <div class="field">
-        <span>Origen del limón (opcional)</span>
+        <span>Origen (opcional)</span>
         <ChipRow
           label="Origen"
           testid={id('chips-origin')}
@@ -182,15 +188,17 @@ export function NuevaVariedad({ initial, onSaved, onCancel, idPrefix = 'new', fi
       <div class="field">
         <span>Calibre o tamaño (opcional)</span>
         <ChipRow label="Tamaño" testid={id('chips-size')} options={SIZE_PRESETS} value={caliber} keyFn={caliberKey} onPick={setCaliber} />
-        <ChipRow
-          label="Calibre"
-          testid={id('chips-caliber')}
-          options={[...CALIBER_NUMBER_PRESETS, ...customCalibers]}
-          noneLabel={UNSPECIFIED.caliber}
-          value={caliber}
-          keyFn={caliberKey}
-          onPick={setCaliber}
-        />
+        {caliberOptions.length > 0 && (
+          <ChipRow
+            label="Calibre"
+            testid={id('chips-caliber')}
+            options={caliberOptions}
+            noneLabel={UNSPECIFIED.caliber}
+            value={caliber}
+            keyFn={caliberKey}
+            onPick={setCaliber}
+          />
+        )}
         <input
           inputMode="text"
           data-testid={id('caliber')}
@@ -203,8 +211,8 @@ export function NuevaVariedad({ initial, onSaved, onCancel, idPrefix = 'new', fi
           onInput={(e) => setCaliber((e.target as HTMLInputElement).value)}
         />
         <p class="help">
-          Si usas un nombre propio (por ejemplo «Torreones»), escríbelo en Calidad o en Calibre, donde tú lo manejes. Los
-          tamaños (1X, 2X, 3X) y los calibres (200 a 500) son listas distintas: la app no los equipara.
+          Elige un tamaño o escribe tu propio calibre. Si usas un nombre propio (por ejemplo «Extra»), escríbelo en Calidad o
+          en Calibre, donde tú lo manejes.
         </p>
       </div>
 
@@ -263,7 +271,7 @@ export function NuevaVariedad({ initial, onSaved, onCancel, idPrefix = 'new', fi
 
       <div class="actions">
         <button class="primary" data-testid={addId} disabled={saving} onClick={save}>
-          {editing ? 'Guardar cambios' : 'Agregar variedad'}
+          {editing ? 'Guardar cambios' : 'Agregar producto'}
         </button>
         {editing && onCancel && (
           <button data-testid={cancelId} onClick={onCancel}>

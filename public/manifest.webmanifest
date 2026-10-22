@@ -9,8 +9,8 @@
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#f4f7f0",
-  "theme_color": "#2f7d32",
+  "background_color": "#0e1320",
+  "theme_color": "#121a2c",
   "categories": ["business", "finance"],
   "icons": [
     { "src": "/icons/apple-touch-icon.png", "sizes": "180x180", "type": "image/png", "purpose": "any" },

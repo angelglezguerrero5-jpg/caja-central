@@ -18,16 +18,115 @@ import { Fletes } from './Fletes';
 import { fmtDateTime } from './format';
 import { NuevaVariedad } from './NuevaVariedad';
 import { AuthorizeSheet, WarningsSheet } from './Sheet';
+import './inventario.css';
 
 type MoveKind = 'entrada' | 'merma' | 'ajuste';
+/** Botones de acción de cada tarjeta: lo que pasó con la mercancía, en palabras del puesto. */
+const KIND_BUTTON: Record<MoveKind, string> = {
+  entrada: '＋ Entró',
+  merma: '− Merma',
+  ajuste: 'Contar',
+};
+/** Título del formulario que abre cada botón (explica en una línea para qué sirve). */
+const KIND_TITLE: Record<MoveKind, string> = {
+  entrada: '＋ Entró mercancía',
+  merma: '− Merma: se echó a perder o se perdió',
+  ajuste: 'Contar: escribe lo que hay de verdad',
+};
+
+/**
+ * Umbral de «Poco»: menos de 10 unidades disponibles de la medida del producto (10 kg, 10 cajas, 10 piezas…). Es solo un
+ * aviso visual de la tarjeta; no frena ventas ni movimientos.
+ */
+const LOW_STOCK_MILLI = 10_000;
+type StockStatus = 'ok' | 'poco' | 'agotado' | 'negativo';
+const STATUS_LABEL: Record<StockStatus, string> = {
+  ok: 'Disponible',
+  poco: 'Poco',
+  agotado: 'Agotado',
+  negativo: 'Negativo',
+};
+/** Estado según lo DISPONIBLE (en bodega − apartado en vales), que es lo que se puede vender. */
+function stockStatus(p: Product): StockStatus {
+  const a = availableMilli(p);
+  if (a < 0) return 'negativo';
+  if (a === 0) return 'agotado';
+  return a < LOW_STOCK_MILLI ? 'poco' : 'ok';
+}
+
+/** Nombres para los avisos de arriba: los primeros tres y «y N más», para que el aviso no crezca sin fin. */
+function someNames(list: Product[]): string {
+  const names = list.slice(0, 3).map(productLabel);
+  return list.length > 3 ? `${names.join(', ')} y ${list.length - 3} más` : names.join(', ');
+}
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+/**
+ * Encabezado informativo: cuánto hay en bodega (kilos; las otras medidas aparte, porque no se suman con kilos) y qué
+ * productos piden atención. No cambia nada: solo resume lo que ya dicen las tarjetas.
+ */
+function Resumen({ products }: { products: Product[] }) {
+  const byUnit = new Map<Product['unit'], number>();
+  for (const p of products) byUnit.set(p.unit, (byUnit.get(p.unit) ?? 0) + p.physicalMilli);
+  // Kilos primero; cajas, piezas y arpillas no se suman con kilos y se muestran aparte.
+  const [main, ...rest] = [...byUnit]
+    .sort(([a], [b]) => (a === 'kg' ? -1 : b === 'kg' ? 1 : 0))
+    .map(([u, m]) => formatQty(m, u));
+  const agotados = products.filter((p) => p.active && stockStatus(p) === 'agotado');
+  const negativos = products.filter((p) => stockStatus(p) === 'negativo');
+  const apartados = products.filter((p) => p.reservedMilli > 0);
+  return (
+    <div class="inv-summary" data-testid="inv-summary">
+      <div class="inv-total">
+        <span class="inv-total-label">Total en bodega</span>
+        <span class="inv-total-qty" data-testid="inv-total">
+          {main}
+        </span>
+        {rest.length > 0 && (
+          <span class="inv-total-more" data-testid="inv-total-other">
+            y además {rest.join(' · ')}
+          </span>
+        )}
+      </div>
+      {(agotados.length > 0 || negativos.length > 0 || apartados.length > 0) && (
+        <ul class="inv-alerts" aria-label="Avisos de inventario">
+          {negativos.length > 0 && (
+            <li class="inv-alert neg" data-testid="inv-alert-negativo">
+              <span class="inv-dot" aria-hidden="true" />
+              <span>
+                {plural(negativos.length, 'producto', 'productos')} con existencia negativa (autorizada): {someNames(negativos)}
+              </span>
+            </li>
+          )}
+          {agotados.length > 0 && (
+            <li class="inv-alert out" data-testid="inv-alert-agotado">
+              <span class="inv-dot" aria-hidden="true" />
+              <span>
+                {plural(agotados.length, 'producto agotado', 'productos agotados')}: {someNames(agotados)}
+              </span>
+            </li>
+          )}
+          {apartados.length > 0 && (
+            <li class="inv-alert res" data-testid="inv-alert-reservado">
+              <span class="inv-dot" aria-hidden="true" />
+              <span>
+                {plural(apartados.length, 'producto', 'productos')} con mercancía apartada por vales:{' '}
+                {apartados
+                  .slice(0, 3)
+                  .map((p) => `${productLabel(p)} (${formatQty(p.reservedMilli, p.unit)})`)
+                  .join(', ')}
+                {apartados.length > 3 && ` y ${apartados.length - 3} más`}
+              </span>
+            </li>
+          )}
+        </ul>
+      )}
+    </div>
+  );
+}
 /** Movimientos que se muestran de entrada en «Movimientos»; «Ver más» agrega otra tanda. */
 const MOVES_PAGE = 15;
-const KIND_LABEL: Record<MoveKind, string> = {
-  entrada: 'Entrada manual',
-  merma: 'Merma',
-  ajuste: 'Conteo físico',
-};
-/** Texto del botón de guardar y del aviso de éxito de cada tipo. */
+/** Aviso de éxito de cada tipo de movimiento. */
 const KIND_DONE: Record<MoveKind, string> = {
   entrada: 'Entrada manual registrada',
   merma: 'Merma registrada',
@@ -166,34 +265,47 @@ function Existencias() {
   }
 
   return (
-    <section data-testid="inventario">
-      <h2>Inventario por variedad</h2>
+    <section data-testid="inventario" class="inv">
+      <h2>Inventario por producto</h2>
+      {products.length > 0 && <Resumen products={products} />}
       <p class="help" data-testid="inv-glossary">
         En bodega = lo que hay físicamente · Apartado = pagado en vales por entregar · Disponible = lo que se puede vender.
       </p>
       {products.length === 0 && <p class="empty">Aún no hay variedades. Agrégalas abajo.</p>}
       {products.map((p) => {
         const t = totals[p.id];
+        const status = stockStatus(p);
+        const open = moving?.p.id === p.id ? moving.kind : null;
         return (
-          <article class={p.active ? 'card' : 'card inactive'} key={p.id} data-testid="inv-row">
+          <article
+            class={`card inv-card is-${status}${p.active ? '' : ' inactive'}`}
+            key={p.id}
+            data-testid="inv-row"
+            data-status={status}
+          >
             <header>
               <strong>{productLabel(p)}</strong>
               <span>{p.priceCents > 0 ? `${formatMoney(p.priceCents)}/${p.unit}` : 'Sin precio'}</span>
             </header>
-            <dl class="stock">
+            <div class="inv-hero">
+              <div class="inv-hero-main">
+                <span class="inv-hero-label">Disponible para vender</span>
+                <span data-testid="stock-available" class={availableMilli(p) < 0 ? 'inv-hero-qty neg' : 'inv-hero-qty'}>
+                  {formatQty(availableMilli(p), p.unit)}
+                </span>
+              </div>
+              <span class={`inv-status s-${status}`} data-testid="inv-status">
+                {STATUS_LABEL[status]}
+              </span>
+            </div>
+            <dl class="stock inv-split">
               <div>
                 <dt>En bodega</dt>
                 <dd data-testid="stock-physical">{formatQty(p.physicalMilli, p.unit)}</dd>
               </div>
               <div>
-                <dt>Apartado</dt>
+                <dt>Apartado en vales</dt>
                 <dd data-testid="stock-reserved">{formatQty(p.reservedMilli, p.unit)}</dd>
-              </div>
-              <div>
-                <dt>Disponible</dt>
-                <dd data-testid="stock-available" class={availableMilli(p) < 0 ? 'neg' : ''}>
-                  {formatQty(availableMilli(p), p.unit)}
-                </dd>
               </div>
             </dl>
             {availableMilli(p) < 0 && (
@@ -202,38 +314,101 @@ function Existencias() {
                 o un conteo físico.
               </p>
             )}
-            {t && (
-              <dl class="stock small" aria-label="Movimientos acumulados">
-                <div>
-                  <dt>Recepciones</dt>
-                  <dd data-testid="stock-recibido">{formatQty(t.recepcionesMilli, p.unit)}</dd>
-                </div>
-                <div>
-                  <dt>Entradas manuales</dt>
-                  <dd data-testid="stock-manual">{formatQty(t.entradasManualesMilli, p.unit)}</dd>
-                </div>
-                <div>
-                  <dt>Vendido</dt>
-                  <dd data-testid="stock-vendido">{formatQty(t.ventasNetasMilli, p.unit)}</dd>
-                </div>
-                <div>
-                  <dt>Mermas</dt>
-                  <dd data-testid="stock-merma">{formatQty(t.mermasMilli, p.unit)}</dd>
-                </div>
-                <div>
-                  <dt>Conteos</dt>
-                  <dd data-testid="stock-ajuste">{formatQty(t.ajustesMilli, p.unit)}</dd>
-                </div>
-              </dl>
-            )}
-            <div class="actions">
+            <div class="inv-moves" role="group" aria-label={`Registrar movimiento de ${productLabel(p)}`}>
               {(['entrada', 'merma', 'ajuste'] as MoveKind[]).map((k) => (
-                <button key={k} data-testid={`move-${k}`} onClick={() => startMove(p, k)}>
-                  {KIND_LABEL[k]}
+                <button
+                  key={k}
+                  type="button"
+                  class={open === k ? `inv-move m-${k} active` : `inv-move m-${k}`}
+                  aria-pressed={open === k}
+                  data-testid={`move-${k}`}
+                  onClick={() => startMove(p, k)}
+                >
+                  {KIND_BUTTON[k]}
                 </button>
               ))}
-              <button data-testid="show-moves" onClick={() => toggleHistory(p)}>
-                Movimientos
+            </div>
+            {open && (
+              <div class={`inline-form inv-form f-${open}`} data-testid="move-form">
+                <p class="inv-form-title">{KIND_TITLE[open]}</p>
+                <label class="field">
+                  <span>
+                    {open === 'ajuste' ? 'Existencia real contada' : 'Cantidad'} ({p.unit})
+                  </span>
+                  <input
+                    data-testid="move-qty"
+                    inputMode="decimal"
+                    autoComplete="off"
+                    value={qtyText}
+                    onInput={(e) => setQtyText((e.target as HTMLInputElement).value)}
+                  />
+                </label>
+                {open === 'entrada' && (
+                  <p class="hint" data-testid="move-entrada-hint">
+                    Úsala para el inventario inicial o mercancía que no viene de un proveedor. Si llegó mercancía de un proveedor,
+                    regístrala en Recepción: así queda con fecha, camión y peso.
+                  </p>
+                )}
+                {open === 'ajuste' && (
+                  <p class="hint">
+                    Ahora dice {formatQty(p.physicalMilli, p.unit)} en bodega. La app guarda la diferencia con lo que cuentes.
+                  </p>
+                )}
+                <label class="field">
+                  <span>{open === 'entrada' ? 'Nota (opcional)' : 'Motivo (obligatorio)'}</span>
+                  <input
+                    data-testid="move-note"
+                    autoComplete="off"
+                    value={note}
+                    onInput={(e) => setNote((e.target as HTMLInputElement).value)}
+                  />
+                </label>
+                <div class="actions two">
+                  <button data-testid="move-cancel" onClick={cancelMove}>
+                    Cancelar
+                  </button>
+                  <button
+                    class="primary"
+                    data-testid="move-save"
+                    disabled={open !== 'entrada' && !note.trim()}
+                    onClick={submitMove}
+                  >
+                    Guardar
+                  </button>
+                </div>
+              </div>
+            )}
+            {t && (
+              // Siempre a la vista (no plegados): son la cuenta que respalda la existencia y se leen de un vistazo.
+              <div class="inv-more">
+                <p class="inv-more-title">Entradas y salidas acumuladas</p>
+                <dl class="stock small" aria-label="Movimientos acumulados">
+                  <div>
+                    <dt>Recepciones</dt>
+                    <dd data-testid="stock-recibido">{formatQty(t.recepcionesMilli, p.unit)}</dd>
+                  </div>
+                  <div>
+                    <dt>Entradas manuales</dt>
+                    <dd data-testid="stock-manual">{formatQty(t.entradasManualesMilli, p.unit)}</dd>
+                  </div>
+                  <div>
+                    <dt>Vendido</dt>
+                    <dd data-testid="stock-vendido">{formatQty(t.ventasNetasMilli, p.unit)}</dd>
+                  </div>
+                  <div>
+                    <dt>Mermas</dt>
+                    <dd data-testid="stock-merma">{formatQty(t.mermasMilli, p.unit)}</dd>
+                  </div>
+                  <div>
+                    <dt>Conteos</dt>
+                    <dd data-testid="stock-ajuste">{formatQty(t.ajustesMilli, p.unit)}</dd>
+                  </div>
+                </dl>
+              </div>
+            )}
+            <div class="inv-tools">
+              <button class="inv-history" data-testid="show-moves" aria-expanded={history?.id === p.id} onClick={() => toggleHistory(p)}>
+                {history?.id === p.id ? 'Cerrar historial' : 'Ver historial de este producto'}
               </button>
               <button data-testid="edit-product" onClick={() => setEditing(editing === p.id ? null : p.id)}>
                 Editar
@@ -286,53 +461,11 @@ function Existencias() {
                 )}
               </ul>
             )}
-            {moving?.p.id === p.id && (
-              <div class="inline-form" data-testid="move-form">
-                <label class="field">
-                  <span>
-                    {moving.kind === 'ajuste' ? 'Existencia real contada' : 'Cantidad'} ({p.unit})
-                  </span>
-                  <input
-                    data-testid="move-qty"
-                    inputMode="decimal"
-                    value={qtyText}
-                    onInput={(e) => setQtyText((e.target as HTMLInputElement).value)}
-                  />
-                </label>
-                {moving.kind === 'entrada' && (
-                  <p class="hint" data-testid="move-entrada-hint">
-                    Úsala para el inventario inicial o mercancía que no viene de un proveedor. Si llegó mercancía de un proveedor,
-                    regístrala en Recepción: así queda con fecha, camión y peso.
-                  </p>
-                )}
-                <label class="field">
-                  <span>{moving.kind === 'entrada' ? 'Nota (opcional)' : 'Motivo (obligatorio)'}</span>
-                  <input
-                    data-testid="move-note"
-                    value={note}
-                    onInput={(e) => setNote((e.target as HTMLInputElement).value)}
-                  />
-                </label>
-                <div class="actions">
-                  <button
-                    class="primary"
-                    data-testid="move-save"
-                    disabled={moving.kind !== 'entrada' && !note.trim()}
-                    onClick={submitMove}
-                  >
-                    Guardar
-                  </button>
-                  <button data-testid="move-cancel" onClick={cancelMove}>
-                    Cancelar
-                  </button>
-                </div>
-              </div>
-            )}
           </article>
         );
       })}
 
-      <h3>Nueva variedad</h3>
+      <h3 class="inv-add-title">Agregar producto</h3>
       <NuevaVariedad />
       {auth && <AuthorizeSheet error={auth.error} busy={authBusy} onCancel={() => setAuth(null)} onAuthorize={() => runPending('auth')} />}
       {warning && (

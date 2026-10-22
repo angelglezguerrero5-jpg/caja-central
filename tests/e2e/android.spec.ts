@@ -729,7 +729,7 @@ for (const phone of PHONES) {
       // ---- Borradores: completar uno (el borrador pasa a registrada con el MISMO id) y descartar otro
       await page.getByTestId('rec-sub-borradores').tap();
       const rows = page.getByTestId('rec-draft-row');
-      await expect(rows.filter({ hasText: 'Sin tipo de limón elegido' })).toHaveCount(1);
+      await expect(rows.filter({ hasText: 'Sin producto elegido' })).toHaveCount(1);
       await expect(rows.filter({ hasText: 'Falta: Escribe cuántas arpillas' })).toHaveCount(1);
       const d1 = rows.filter({ hasText: 'Con semilla · Oaxaca · Primera · 300' });
       await expect(d1).toContainText('Caja limonera · 40 cajas · Huerta San Miguel · ref. CAM-205');
@@ -2405,6 +2405,9 @@ const SHEETS: SheetCase[] = [
     testid: 'rec-class-sheet',
     open: async (page) => {
       await tab(page, 'recepcion');
+      // El caso anterior dejó un producto elegido: su paso quedó cerrado en la línea resumen y se toca para abrirlo.
+      const sum = page.getByTestId('rec-step-1-sum');
+      if ((await sum.count()) > 0 && (await sum.getAttribute('aria-expanded')) === 'false') await sum.tap();
       await page.getByTestId('rec-variety').filter({ hasText: 'Con semilla' }).tap();
       await page.getByTestId('rec-class-all').tap();
     },

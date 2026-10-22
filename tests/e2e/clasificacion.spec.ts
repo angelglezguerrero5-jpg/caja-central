@@ -779,8 +779,11 @@ test.describe('Alta y elección de clasificaciones desde Recepción', () => {
     await expect(page.getByTestId('rec-selected')).toContainText(`${SIN} · 3X`);
     await expect(page.getByTestId('rec-class-hint')).toHaveCount(0);
     // Cambiar a otra variedad con varias vuelve a dejar la elección vacía; con una sola la elige de una vez.
+    // (Elegida la clasificación, el paso «¿Qué llegó?» se cierra en su línea resumen: se toca para cambiar el producto.)
+    await page.getByTestId('rec-step-1-sum').click();
     await page.getByTestId('rec-variety').filter({ hasText: exactText(CON) }).click();
     await expect(page.getByTestId('rec-selected')).toContainText(CON);
+    await page.getByTestId('rec-step-1-sum').click();
     await page.getByTestId('rec-variety').filter({ hasText: exactText(SIN) }).click();
     await expect(page.getByTestId('rec-selected')).toHaveCount(0);
     await expect(page.getByTestId('rec-class-hint')).toBeVisible();

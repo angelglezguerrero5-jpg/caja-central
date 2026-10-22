@@ -243,8 +243,18 @@ export async function subTab(page: Page, sub: 'nueva' | 'borradores' | 'historia
   await expect(page.getByTestId(area)).toBeVisible();
 }
 
+/**
+ * Si el paso «¿Qué llegó?» quedó cerrado en su línea resumen (ya había un producto elegido), la toca para abrirlo otra vez,
+ * como lo haría una persona que quiere cambiar el producto.
+ */
+export async function openProductStep(page: Page) {
+  const sum = page.getByTestId('rec-step-1-sum');
+  if ((await sum.count()) > 0 && (await sum.getAttribute('aria-expanded')) === 'false') await sum.click();
+}
+
 /** Elige la clasificación a recibir tocando los chips (la variedad con varias clasificaciones pide además la clasificación). */
 export async function pick(page: Page, which: Which) {
+  await openProductStep(page);
   if (which === 'semilla') {
     await page.getByTestId('rec-variety').filter({ hasText: 'Con semilla' }).click();
   } else {
