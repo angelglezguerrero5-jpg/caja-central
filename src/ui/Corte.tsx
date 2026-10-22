@@ -120,7 +120,7 @@ export function Corte() {
       </dl>
       {report.byProduct.length > 0 && (
         <>
-          <h3>Por variedad</h3>
+          <h3>Por producto</h3>
           <ul class="plain">
             {report.byProduct.map((p) => (
               <li key={p.productId + p.unit}>

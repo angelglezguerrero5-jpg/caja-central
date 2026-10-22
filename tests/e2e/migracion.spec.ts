@@ -757,7 +757,7 @@ test.describe('Actualización REAL desde la app anterior (caso 24, 19)', () => {
         const p2 = await otro.newPage();
         await openApp(p2, { seed: false });
         await chooseBackup(p2, textFile(respaldoV1.text, respaldoV1.filename));
-        await expect(p2.getByTestId('restore-summary')).toContainText('2 ventas, 0 recepciones, 3 variedades, 3 movimientos de inventario');
+        await expect(p2.getByTestId('restore-summary')).toContainText('2 ventas, 0 recepciones, 3 productos, 3 movimientos de inventario');
         await confirmRestoreSheet(p2);
         const restaurado = await readRawDb(p2);
         expectSameData(restaurado, antes, 'respaldo real de la app anterior', V1_DATA_STORES);

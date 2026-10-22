@@ -272,7 +272,7 @@ export function validateBackup(data: unknown): Backup {
   }
   if (!isInt(b.nextFolio, 1) || b.nextFolio > FOLIO_MAX + 1) throw new Error('Respaldo con folio inválido');
 
-  const products = checkAll<Backup['products'][number]>('variedad', SPECS.product, b.products as unknown[]);
+  const products = checkAll<Backup['products'][number]>('producto', SPECS.product, b.products as unknown[]);
   const sales = checkAll<Backup['sales'][number]>('venta', SPECS.sale, b.sales as unknown[]);
   const shifts = checkAll<Backup['shifts'][number]>('turno', SPECS.shift, b.shifts as unknown[]);
   const cashMovements = checkAll<Backup['cashMovements'][number]>('movimiento de caja', SPECS.cashMovement, b.cashMovements as unknown[]);
@@ -290,7 +290,7 @@ export function validateBackup(data: unknown): Backup {
   // Unicidad
   // (mensaje histórico conservado para ventas duplicadas)
   if (new Set(sales.map((s) => s.id)).size !== sales.length) throw new Error('Respaldo con ventas duplicadas');
-  uniq('variedades', products.map((p) => p.id));
+  uniq('productos', products.map((p) => p.id));
   uniq('turnos', shifts.map((p) => p.id));
   uniq('movimientos de caja', cashMovements.map((p) => p.id));
   uniq('movimientos de inventario', stockMoves.map((p) => p.id));

@@ -161,7 +161,7 @@ for (const phone of PHONES) {
       await watchTaps(page);
       await form.getByTestId('add-product').tap();
       await expectSolidTap(page, 'add-product');
-      await expect(page.getByTestId('toast')).toContainText('Variedad agregada');
+      await expect(page.getByTestId('toast')).toContainText('Producto agregado');
     });
 
     test('alta de variedad con TECLADO ABIERTO: se esconden las pestañas y el primer toque sigue funcionando', async ({ page }) => {
@@ -175,7 +175,7 @@ for (const phone of PHONES) {
       await watchTaps(page);
       await form.getByTestId('add-product').tap();
       await expectSolidTap(page, 'add-product');
-      await expect(page.getByTestId('toast')).toContainText('Variedad agregada');
+      await expect(page.getByTestId('toast')).toContainText('Producto agregado');
     });
 
     test('recepción con teclado abierto: barra de registro en el borde, campo no tapado y registro al primer toque', async ({ page }) => {
@@ -335,7 +335,7 @@ for (const phone of PHONES) {
       // Se puede escribir y guardar dentro de la hoja (los botones responden).
       await sheet.getByTestId('recnew-name').fill('Limón criollo');
       await sheet.getByTestId('recnew-add').tap();
-      await expect(page.getByTestId('toast')).toContainText('Variedad agregada');
+      await expect(page.getByTestId('toast')).toContainText('Producto agregado');
       await expect(sheet).toBeHidden();
       // Al cerrar no queda NADA inerte.
       expect(await page.evaluate(() => document.querySelectorAll('[inert], [data-sheet-inert]').length)).toBe(0);

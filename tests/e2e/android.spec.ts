@@ -509,7 +509,7 @@ for (const phone of PHONES) {
       await layout.check('Recepción › Resumen · sin datos');
 
       await tab(page, 'inventario');
-      await expect(page.getByTestId('inventario').locator('.empty')).toHaveText('Aún no hay variedades. Agrégalas abajo.');
+      await expect(page.getByTestId('inventario').locator('.empty')).toHaveText('Aún no hay productos. Agrégalos abajo.');
       await layout.check('Inventario · vacío');
 
       await tab(page, 'corte');
@@ -732,7 +732,7 @@ for (const phone of PHONES) {
       await expect(rows.filter({ hasText: 'Sin producto elegido' })).toHaveCount(1);
       await expect(rows.filter({ hasText: 'Falta: Escribe cuántas arpillas' })).toHaveCount(1);
       const d1 = rows.filter({ hasText: 'Con semilla · Oaxaca · Primera · 300' });
-      await expect(d1).toContainText('Caja limonera · 40 cajas · Huerta San Miguel · ref. CAM-205');
+      await expect(d1).toContainText('Caja · 40 cajas · Huerta San Miguel · ref. CAM-205');
       await expect(d1).toContainText('Falta: Escribe el peso neto de cada caja');
       const d2 = rows.filter({ hasText: 'Con semilla · Michoacán · Segunda · 300' });
       await expect(d2).toContainText('Kilos netos: 75 kg');
@@ -1236,7 +1236,7 @@ test.describe('Android · hojas modales · 360×640', () => {
     await page.getByTestId('import-file').setInputFiles({ name: 'mismo.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(b)) });
     await expect(page.getByTestId('restore-sheet')).toBeVisible();
     await expect(page.getByTestId('restore-summary')).toContainText(
-      `${plural(b.sales.length, 'venta', 'ventas')}, ${plural(b.receptions.length, 'recepción', 'recepciones')}, ${plural(b.products.length, 'variedad', 'variedades')}, ${plural(b.stockMoves.length, 'movimiento de inventario', 'movimientos de inventario')}`,
+      `${plural(b.sales.length, 'venta', 'ventas')}, ${plural(b.receptions.length, 'recepción', 'recepciones')}, ${plural(b.products.length, 'producto', 'productos')}, ${plural(b.stockMoves.length, 'movimiento de inventario', 'movimientos de inventario')}`,
     );
     await expect(page.getByTestId('restore-loss')).toContainText(
       `Se perderá lo que capturaste DESPUÉS de ese momento: ${plural(lostSales, 'venta', 'ventas')}, ${plural(lostRecs, 'recepción', 'recepciones')} y ${plural(lostMoves, 'movimiento de inventario', 'movimientos de inventario')}`,
@@ -1313,7 +1313,7 @@ test.describe('Android · hojas modales · 360×640', () => {
     await sheet.getByTestId('recnew-quality').fill('Primera');
     await sheet.getByTestId('recnew-caliber').fill('350');
     await sheet.getByTestId('recnew-add').tap();
-    await expect(page.getByTestId('toast')).toContainText('Variedad agregada');
+    await expect(page.getByTestId('toast')).toContainText('Producto agregado');
     await expect(sheet).toHaveCount(0);
     expect(await inertLeft(page)).toBe(0);
     await expect(page.getByTestId('rec-selected')).toContainText('Con semilla · Chiapas · Primera · 350');
@@ -1486,7 +1486,7 @@ test.describe('Android · textos y cantidades extremas · 360×640', () => {
     await form.getByTestId('new-price').fill('12.5');
     await layout.check('Inventario · formulario con los cuatro nombres de 40 caracteres (vista previa y chips de sugerencia)');
     await form.getByTestId('add-product').tap();
-    await expect(page.getByTestId('toast')).toContainText('Variedad agregada');
+    await expect(page.getByTestId('toast')).toContainText('Producto agregado');
     await layout.check('Inventario · lista con la clasificación de nombres sin espacios');
     await expect(page.getByTestId('inv-row').last()).toContainText(unbroken(40, 'W'));
 

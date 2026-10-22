@@ -82,6 +82,14 @@ if (problems.length === 0) {
     need(list.includes(ref), `index.html usa ${ref} pero no está en el precache`);
   }
   for (const i of m.icons ?? []) need(list.includes(i.src), `el ícono ${i.src} del manifest no está en el precache`);
+  // Lo que la interfaz pide por ruta fija desde el JS (p. ej. el logo del encabezado, /icons/logo.svg) también debe abrir sin red.
+  for (const u of list.filter((x) => x.endsWith('.js'))) {
+    const f = join(dist, u.slice(1));
+    if (!existsSync(f)) continue;
+    for (const [, ref] of readFileSync(f, 'utf8').matchAll(/["'`](\/icons\/[\w.-]+)["'`]/g)) {
+      need(list.includes(ref), `${u} usa ${ref} pero no está en el precache`);
+    }
+  }
   need(/const CACHE = 'caja-central-[0-9a-f]{12}'/.test(sw), 'la caché del service worker debe llevar versión (caja-central-<hash>)');
   // Seguridad de la caché: solo se precachea lo estático del build. Nada de guardar respuestas de la red al vuelo
   // (en esta app los datos viven en IndexedDB, no en cachés), nada de peticiones que no sean GET ni de otros orígenes.

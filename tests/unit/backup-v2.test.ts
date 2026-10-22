@@ -163,9 +163,9 @@ describe('respaldo corrupto: se rechaza sin perder información (caso 20)', () =
     await rejectsKeepingData('v2 sin recepciones', (b) => (b.version = 2), /receptions/);
     await rejectsKeepingData('folio cero', (b) => (b.nextFolio = 0), /folio/);
     await rejectsKeepingData('folio ya usado', (b) => (b.nextFolio = 1), /ya fue usado/);
-    await rejectsKeepingData('precio negativo', (b) => (b.products[0].priceCents = -5), /variedad nº 1/);
-    await rejectsKeepingData('precio texto', (b) => (b.products[0].priceCents = '3000'), /variedad nº 1/);
-    await rejectsKeepingData('unidad rara', (b) => (b.products[0].unit = 'tonelada'), /variedad nº 1/);
+    await rejectsKeepingData('precio negativo', (b) => (b.products[0].priceCents = -5), /producto nº 1/);
+    await rejectsKeepingData('precio texto', (b) => (b.products[0].priceCents = '3000'), /producto nº 1/);
+    await rejectsKeepingData('unidad rara', (b) => (b.products[0].unit = 'tonelada'), /producto nº 1/);
     await rejectsKeepingData('venta sin items', (b) => (b.sales[0].items = []), /venta nº 1/);
     await rejectsKeepingData('cantidad negativa', (b) => (b.sales[0].items[0].qtyMilli = -1), /venta nº 1/);
     await rejectsKeepingData('cantidad decimal', (b) => (b.sales[0].items[0].qtyMilli = 1.5), /venta nº 1/);
@@ -173,10 +173,10 @@ describe('respaldo corrupto: se rechaza sin perder información (caso 20)', () =
     await rejectsKeepingData('estado raro', (b) => (b.sales[0].status = 'borrada'), /venta nº 1/);
     await rejectsKeepingData('día inválido', (b) => (b.sales[0].day = 'ayer'), /venta nº 1/);
     await rejectsKeepingData('fecha inválida', (b) => (b.sales[0].createdAt = 'nunca'), /venta nº 1/);
-    await rejectsKeepingData('texto gigante', (b) => (b.products[0].name = 'x'.repeat(5000)), /variedad nº 1/);
+    await rejectsKeepingData('texto gigante', (b) => (b.products[0].name = 'x'.repeat(5000)), /producto nº 1/);
     await rejectsKeepingData('movimiento con tipo raro', (b) => (b.stockMoves[0].type = 'regalo'), /movimiento de inventario nº 1/);
     await rejectsKeepingData('turno sin fondo', (b) => delete b.shifts[0].openingCashCents, /turno nº 1/);
-    await rejectsKeepingData('registro no objeto', (b) => (b.products[0] = 'hola'), /variedad nº 1/);
+    await rejectsKeepingData('registro no objeto', (b) => (b.products[0] = 'hola'), /producto nº 1/);
   });
 
   it('duplicados', async () => {

@@ -271,7 +271,7 @@ function Existencias() {
       <p class="help" data-testid="inv-glossary">
         En bodega = lo que hay físicamente · Apartado = pagado en vales por entregar · Disponible = lo que se puede vender.
       </p>
-      {products.length === 0 && <p class="empty">Aún no hay variedades. Agrégalas abajo.</p>}
+      {products.length === 0 && <p class="empty">Aún no hay productos. Agrégalos abajo.</p>}
       {products.map((p) => {
         const t = totals[p.id];
         const status = stockStatus(p);

@@ -137,7 +137,7 @@ export interface MerchandiseReport {
 const inRange = (day: string, from: string, to: string) => day >= from && day <= to;
 
 const LABELS = {
-  variety: 'Sin variedad',
+  variety: 'Sin producto',
   origin: 'No especificada',
   quality: 'Sin clasificar',
   caliber: 'No especificado',
@@ -239,7 +239,7 @@ export function buildMerchandiseReport(input: MerchandiseInput): MerchandiseRepo
     d.receptions++;
     const prod = r.productId ? productById.get(r.productId) : undefined;
     const cls = r.cls ?? (prod ? classificationOf(prod) : undefined);
-    addFlow(cls, r.productLabel ?? 'Sin variedad', 'receivedMilli', net);
+    addFlow(cls, r.productLabel ?? 'Sin producto', 'receivedMilli', net);
     let pr = packRows.get(r.packaging);
     if (!pr) packRows.set(r.packaging, (pr = { packaging: r.packaging, receptions: 0, containers: 0, receivedMilli: 0 }));
     pr.receptions++;

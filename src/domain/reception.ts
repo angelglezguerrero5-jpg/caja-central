@@ -195,11 +195,11 @@ export function validateFields(f: ReceptionFields, opts: ValidateOptions): strin
   }
 
   if (opts.forConfirm) {
-    if (!f.productId) errors.push('Elige el tipo de limón (variedad y clasificación)');
-    else if (!opts.product) errors.push('La variedad elegida ya no existe');
-    else if (!opts.product.active) errors.push('La variedad elegida está oculta: actívala en Inventario');
+    if (!f.productId) errors.push('Elige qué producto llegó');
+    else if (!opts.product) errors.push('El producto elegido ya no existe');
+    else if (!opts.product.active) errors.push('El producto elegido está oculto: actívalo en Inventario');
     else if (opts.product.unit !== 'kg') {
-      errors.push('La recepción suma kilos: elige una variedad que se venda por kg');
+      errors.push('La recepción suma kilos: elige un producto que se venda por kg');
     }
   } else {
     const empty =

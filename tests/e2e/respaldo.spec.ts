@@ -187,8 +187,8 @@ test.describe('Exportar y restaurar en otro dispositivo (caso 18, 23, 25)', () =
       await chooseBackup(p2, uploadOf(file));
       await expect(p2.getByTestId('restore-sheet')).toBeVisible();
       await expect(p2.getByTestId('restore-replace')).toContainText('REEMPLAZA todo');
-      await expect(p2.getByTestId('restore-summary')).toContainText('2 ventas, 5 recepciones, 3 variedades, 7 movimientos de inventario');
-      await expect(p2.getByTestId('restore-current')).toContainText('0 ventas, 0 recepciones, 0 variedades, 0 movimientos de inventario');
+      await expect(p2.getByTestId('restore-summary')).toContainText('2 ventas, 5 recepciones, 3 productos, 7 movimientos de inventario');
+      await expect(p2.getByTestId('restore-current')).toContainText('0 ventas, 0 recepciones, 0 productos, 0 movimientos de inventario');
       // Dispositivo vacío: no hay nada que perder, así que no pide «Entiendo…» ni avisa de pérdidas
       for (const id of ['restore-loss', 'restore-loss-receptions', 'restore-audit', 'restore-understood-box']) await expect(p2.getByTestId(id), id).toHaveCount(0);
       expect(await readRawDb(p2), 'hasta confirmar no cambia nada').toEqual(empty);
@@ -318,7 +318,7 @@ test.describe('Exportar y restaurar en otro dispositivo (caso 18, 23, 25)', () =
     for (const k of [...V1_STORES, 'receptions']) expect(file.json[k], `«${k}» vacía`).toEqual([]);
     await expectToast(page, 'Respaldo exportado (0 ventas, 0 recepciones)');
     await chooseBackup(page, uploadOf(file));
-    await expect(page.getByTestId('restore-summary')).toContainText('0 ventas, 0 recepciones, 0 variedades, 0 movimientos de inventario');
+    await expect(page.getByTestId('restore-summary')).toContainText('0 ventas, 0 recepciones, 0 productos, 0 movimientos de inventario');
     await confirmRestoreSheet(page);
     const raw = await readRawDb(page);
     for (const k of [...V1_STORES, 'receptions']) expect(rowsOf(raw, k), `«${k}» vacía tras restaurar`).toEqual([]);
@@ -343,7 +343,7 @@ test.describe('Exportar y restaurar en otro dispositivo (caso 18, 23, 25)', () =
       const p2 = other.page;
       await openApp(p2, { seed: false });
       await chooseBackup(p2, uploadOf(file));
-      await expect(p2.getByTestId('restore-summary')).toContainText('7 ventas, 1 recepción, 4 variedades, 14 movimientos de inventario'); // 13 de v1 + la recepción
+      await expect(p2.getByTestId('restore-summary')).toContainText('7 ventas, 1 recepción, 4 productos, 14 movimientos de inventario'); // 13 de v1 + la recepción
       await confirmRestoreSheet(p2);
       const dst = await readRawDb(p2);
       expectSameData(dst, src, 'otro dispositivo');
@@ -531,9 +531,9 @@ test.describe('Respaldo de la versión anterior (caso 19)', () => {
     await expect(page.getByTestId('restore-replace')).toContainText('REEMPLAZA todo lo que hay ahora en este teléfono');
     await expect(page.getByTestId('restore-replace')).toContainText('Los folios que ya se emitieron no se repiten');
     await expect(page.getByTestId('restore-summary')).toContainText('El respaldo trae');
-    await expect(page.getByTestId('restore-summary')).toContainText('7 ventas, 0 recepciones, 4 variedades, 13 movimientos de inventario');
+    await expect(page.getByTestId('restore-summary')).toContainText('7 ventas, 0 recepciones, 4 productos, 13 movimientos de inventario');
     await expect(page.getByTestId('restore-current')).toContainText('Hoy tienes');
-    await expect(page.getByTestId('restore-current')).toContainText('1 venta, 1 recepción, 3 variedades, 2 movimientos de inventario');
+    await expect(page.getByTestId('restore-current')).toContainText('1 venta, 1 recepción, 3 productos, 2 movimientos de inventario');
     await expect(page.getByTestId('restore-loss')).toContainText('Se perderá lo que capturaste DESPUÉS de ese momento: 1 venta, 1 recepción y 2 movimientos de inventario');
     await expect(page.getByTestId('restore-loss-receptions')).toContainText('Este respaldo es de una versión anterior y no trae recepciones');
     await expect(page.getByTestId('restore-audit'), 'el respaldo v1 de la fixture es coherente').toHaveCount(0);
@@ -581,7 +581,7 @@ test.describe('Respaldo de la versión anterior (caso 19)', () => {
     await expect(hoja.or(error)).toBeVisible();
     const mensaje = (await error.count()) ? ((await error.textContent()) ?? '') : '';
     expect(mensaje, `la app rechazó un respaldo hecho por la app anterior: «${mensaje}»`).toBe('');
-    await expect(page.getByTestId('restore-summary')).toContainText('8 ventas, 0 recepciones, 4 variedades, 15 movimientos de inventario');
+    await expect(page.getByTestId('restore-summary')).toContainText('8 ventas, 0 recepciones, 4 productos, 15 movimientos de inventario');
     await confirmRestoreSheet(page);
     expect(rowsOf(await readRawDb(page), 'sales')).toHaveLength(8);
   });
@@ -590,8 +590,8 @@ test.describe('Respaldo de la versión anterior (caso 19)', () => {
     const f = fixtureV1();
     await openApp(page, { seed: false });
     await chooseBackup(page, jsonFile(f, 'respaldo-v1.json'));
-    await expect(page.getByTestId('restore-summary')).toContainText('7 ventas, 0 recepciones, 4 variedades, 13 movimientos de inventario');
-    await expect(page.getByTestId('restore-current')).toContainText('0 ventas, 0 recepciones, 0 variedades, 0 movimientos de inventario');
+    await expect(page.getByTestId('restore-summary')).toContainText('7 ventas, 0 recepciones, 4 productos, 13 movimientos de inventario');
+    await expect(page.getByTestId('restore-current')).toContainText('0 ventas, 0 recepciones, 0 productos, 0 movimientos de inventario');
     for (const id of ['restore-loss', 'restore-loss-receptions', 'restore-audit', 'restore-understood-box']) await expect(page.getByTestId(id), id).toHaveCount(0);
     await confirmRestoreSheet(page);
     const after = await readRawDb(page);
@@ -743,7 +743,7 @@ test.describe('Sin internet y estado visible después de restaurar', () => {
     const mio = await exportBackupUi(page);
     expect(mio.json.products).toHaveLength(3);
     await chooseBackup(page, jsonFile(richV2()));
-    await expect(page.getByTestId('restore-summary')).toContainText('2 ventas, 5 recepciones, 2 variedades, 7 movimientos de inventario');
+    await expect(page.getByTestId('restore-summary')).toContainText('2 ventas, 5 recepciones, 2 productos, 7 movimientos de inventario');
     await confirmRestoreSheet(page);
     const raw = await readRawDb(page);
     expectSameData(raw, rawFromBackup(richV2() as unknown as Rec), 'sin internet');
@@ -796,7 +796,7 @@ test.describe('Respaldos corruptos: se rechazan SIN perder nada (caso 20)', () =
     { name: 'recepción con neto desbordado (1e15 milésimas)', file: () => rich((b) => (rec(b, 'rec-1').confirmedNetMilli = 1e15)), error: /Respaldo dañado: recepción nº \d+ \(confirmedNetMilli: número entero inválido o fuera de rango\)/ },
     { name: 'folio de venta duplicado', file: () => rich((b) => (b.sales[1].folio = b.sales[0].folio)), error: /folios de venta repetidos/ },
     { name: 'folio de recepción duplicado', file: () => rich((b) => (rec(b, 'rec-2').folio = 1)), error: /folios de recepción repetidos/ },
-    { name: 'texto enorme (5000 caracteres) en el nombre de una variedad', file: () => rich((b) => (b.products[0].name = 'x'.repeat(5000))), error: /Respaldo dañado: variedad nº 1 \(name: texto inválido\)/ },
+    { name: 'texto enorme (5000 caracteres) en el nombre de una variedad', file: () => rich((b) => (b.products[0].name = 'x'.repeat(5000))), error: /Respaldo dañado: producto nº 1 \(name: texto inválido\)/ },
     { name: 'texto enorme (2001 caracteres) en el proveedor de una recepción', file: () => rich((b) => (rec(b, 'rec-1').supplier = 'p'.repeat(2001))), error: /Respaldo dañado: recepción nº \d+ \(supplier: texto inválido\)/ },
     { name: 'respaldo v2 sin la lista de recepciones', file: () => rich((b) => delete b.receptions), error: /Respaldo incompleto: falta receptions/ },
     { name: 'siguiente folio de recepción ya usado', file: () => rich((b) => (b.nextReceptionFolio = 3)), error: /el folio de recepción siguiente ya fue usado/ },
@@ -820,8 +820,8 @@ test.describe('Respaldos corruptos: se rechazan SIN perder nada (caso 20)', () =
   }
 
   const ADVERTENCIAS: Array<{ name: string; file: () => UploadFile; first: RegExp }> = [
-    { name: 'recepción que apunta a una variedad que no existe', file: () => rich((b) => (rec(b, 'rec-1').productId = 'no-existe')), first: /su variedad ya no existe/ },
-    { name: 'movimiento de inventario huérfano (su variedad no existe)', file: () => rich((b) => b.stockMoves.push({ id: 'mv-huerfano', productId: 'fantasma', createdAt: '2026-10-05T16:00:00.000Z', type: 'entrada', deltaMilli: 1000, reservedDeltaMilli: 0, note: '' })), first: /apunta a una variedad que no existe/ },
+    { name: 'recepción que apunta a una variedad que no existe', file: () => rich((b) => (rec(b, 'rec-1').productId = 'no-existe')), first: /su producto ya no existe/ },
+    { name: 'movimiento de inventario huérfano (su variedad no existe)', file: () => rich((b) => b.stockMoves.push({ id: 'mv-huerfano', productId: 'fantasma', createdAt: '2026-10-05T16:00:00.000Z', type: 'entrada', deltaMilli: 1000, reservedDeltaMilli: 0, note: '' })), first: /apunta a un producto que no existe/ },
     { name: 'movimiento que apunta a una recepción que no existe', file: () => rich((b) => (b.stockMoves.find((m: Rec) => m.id === 'rcp:rec-1:in').receptionId = 'no-existe')), first: /apunta a una recepción que no existe/ },
     { name: 'totales de venta incoherentes (el total no es la suma de los renglones)', file: () => rich((b) => (b.sales[0].totalCents += 100)), first: /el total no coincide con sus renglones/ },
   ];
@@ -852,7 +852,7 @@ test.describe('Respaldos corruptos: se rechazan SIN perder nada (caso 20)', () =
     expect(auditRaw(roto!).join(' | ')).toMatch(/su variedad no existe|variedad/);
     const audit = await runAuditUi(page);
     await expect(audit).toContainText('problema(s)');
-    await expect(audit).toContainText('su variedad ya no existe');
+    await expect(audit).toContainText('su producto ya no existe');
     await expect(audit).toHaveClass(/warn/);
 
     await page.getByTestId('undo-restore').click();
@@ -906,7 +906,7 @@ test.describe('Respaldos corruptos: se rechazan SIN perder nada (caso 20)', () =
     const buffer = Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(texto, 'utf8')]);
     await chooseBackup(page, { name: 'respaldo-bloc-de-notas.json', mimeType: 'application/json', buffer });
     await expect(page.getByTestId('restore-sheet')).toBeVisible();
-    await expect(page.getByTestId('restore-summary')).toContainText('2 ventas, 0 recepciones, 1 variedad, 3 movimientos de inventario');
+    await expect(page.getByTestId('restore-summary')).toContainText('2 ventas, 0 recepciones, 1 producto, 3 movimientos de inventario');
     await page.getByTestId('restore-cancel').click();
     expect(await readRawDb(page), 'cancelar no cambia nada').toEqual(before);
   });
@@ -933,7 +933,7 @@ test.describe('Respaldos corruptos: se rechazan SIN perder nada (caso 20)', () =
     expect(statSync(ruta).size).toBeLessThan(25 * 1024 * 1024);
     await chooseBackup(page, ruta);
     await expect(page.getByTestId('restore-sheet')).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByTestId('restore-summary')).toContainText('3 ventas, 0 recepciones, 1 variedad, 4 movimientos de inventario');
+    await expect(page.getByTestId('restore-summary')).toContainText('3 ventas, 0 recepciones, 1 producto, 4 movimientos de inventario');
     await page.getByTestId('restore-cancel').click();
     expect(await readRawDb(page), 'cancelar no cambia nada').toEqual(before);
   });
@@ -946,7 +946,7 @@ test.describe('Respaldos corruptos: se rechazan SIN perder nada (caso 20)', () =
     await chooseBackup(page, jsonFile(grande, 'respaldo-grande.json'));
     await expect(page.getByTestId('restore-sheet')).toBeVisible({ timeout: 60_000 });
     const hoja = Date.now() - t0;
-    await expect(page.getByTestId('restore-summary')).toContainText('3000 ventas, 0 recepciones, 1 variedad, 3001 movimientos de inventario');
+    await expect(page.getByTestId('restore-summary')).toContainText('3000 ventas, 0 recepciones, 1 producto, 3001 movimientos de inventario');
     const t1 = Date.now();
     await confirmRestoreSheet(page);
     const restauracion = Date.now() - t1;
@@ -993,8 +993,8 @@ test.describe('Deshacer una restauración y red de seguridad (caso 20)', () => {
     await page.getByTestId('undo-restore').click();
     await expect(page.getByTestId('restore-sheet')).toContainText('Deshacer la última restauración');
     await expect(page.getByTestId('restore-summary')).toContainText('La copia interna trae');
-    await expect(page.getByTestId('restore-summary')).toContainText('2 ventas, 5 recepciones, 2 variedades, 7 movimientos de inventario');
-    await expect(page.getByTestId('restore-current')).toContainText('7 ventas, 0 recepciones, 4 variedades, 13 movimientos de inventario');
+    await expect(page.getByTestId('restore-summary')).toContainText('2 ventas, 5 recepciones, 2 productos, 7 movimientos de inventario');
+    await expect(page.getByTestId('restore-current')).toContainText('7 ventas, 0 recepciones, 4 productos, 13 movimientos de inventario');
     await expect(page.getByTestId('restore-confirm')).toContainText('Volver a ese estado');
     await confirmRestoreSheet(page, 'Restauración deshecha');
 

@@ -159,7 +159,7 @@ function auditStockMoves(b: Backup, bad: (m: string) => void): void {
     const tag = `Movimiento "${m.type}"${m.note ? ` (${m.note})` : ''}`;
     if (ids.has(m.id)) bad(`${tag}: identificador repetido`);
     ids.add(m.id);
-    if (!productIds.has(m.productId)) bad(`${tag}: apunta a una variedad que no existe`);
+    if (!productIds.has(m.productId)) bad(`${tag}: apunta a un producto que no existe`);
     const d = m.deltaMilli;
     const r = m.reservedDeltaMilli;
     const wrong = (what: string) => bad(`${tag}: ${what}`);
@@ -287,10 +287,16 @@ function auditCatalog(b: Backup, warn: (m: string) => void): void {
       const k = classificationKey(p);
       byKey.set(k, [...(byKey.get(k) ?? []), productLabel(p)]);
     }
-    for (const [label, v] of [['variedad', p.name], ['procedencia', p.origin], ['calidad', p.quality], ['calibre', p.caliber]] as const) {
+    const fields = [
+      ['el nombre del producto', p.name, 'vacío'],
+      ['la procedencia', p.origin, 'vacía'],
+      ['la calidad', p.quality, 'vacía'],
+      ['el calibre', p.caliber, 'vacío'],
+    ] as const;
+    for (const [label, v, empty] of fields) {
       if (v === undefined) continue;
-      if (v.length > MAX_CLASS_LEN) warn(`«${productLabel(p).slice(0, 50)}…»: la ${label} tiene más de ${MAX_CLASS_LEN} caracteres (capturada antes de este límite)`);
-      if (label !== 'variedad' && isUnspecified(v)) warn(`«${productLabel(p)}»: la ${label} dice «${v}» en vez de quedar vacía; significan lo mismo`);
+      if (v.length > MAX_CLASS_LEN) warn(`«${productLabel(p).slice(0, 50)}…»: ${label} tiene más de ${MAX_CLASS_LEN} caracteres (se capturó antes de este límite)`);
+      if (label !== 'el nombre del producto' && isUnspecified(v)) warn(`«${productLabel(p)}»: ${label} dice «${v}» en vez de quedar ${empty}; significan lo mismo`);
     }
   }
   for (const labels of byKey.values()) {
@@ -380,8 +386,8 @@ function auditReceptions(b: Backup, bad: (m: string) => void): void {
       continue;
     }
     const product = productById.get(r.productId);
-    if (!product) bad(`${tag}: su variedad ya no existe`);
-    else if (product.unit !== 'kg') bad(`${tag}: la variedad no se vende por kg`);
+    if (!product) bad(`${tag}: su producto ya no existe`);
+    else if (product.unit !== 'kg') bad(`${tag}: el producto no se vende por kg`);
 
     const net = computeNet(r);
     if (!net.ok) bad(`${tag}: no se puede recalcular el peso neto (${net.error})`);
@@ -395,7 +401,7 @@ function auditReceptions(b: Backup, bad: (m: string) => void): void {
       const e = entradas[0];
       if (e.id !== r.stockMoveId) bad(`${tag}: el movimiento enlazado no es el registrado`);
       if (e.deltaMilli !== r.confirmedNetMilli) bad(`${tag}: el movimiento sumó ${e.deltaMilli} y se confirmaron ${r.confirmedNetMilli}`);
-      if (e.productId !== r.productId) bad(`${tag}: el movimiento es de otra variedad`);
+      if (e.productId !== r.productId) bad(`${tag}: el movimiento es de otro producto`);
     }
 
     // Correcciones

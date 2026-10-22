@@ -350,7 +350,7 @@ export async function saveProduct(db: DB, input: ProductInput): Promise<Product>
     // Los límites de texto y la unicidad se exigen solo al CREAR o al CAMBIAR un campo de clasificación: los datos
     // anteriores (que pudieron guardarse con reglas más flexibles) no impiden editar el precio u ocultar el producto.
     const fieldsIn = [
-      ['name', input.name, 'Variedad'],
+      ['name', input.name, 'Producto'],
       ['origin', input.origin, 'Procedencia'],
       ['quality', input.quality, 'Calidad'],
       ['caliber', input.caliber, 'Calibre'],
@@ -364,7 +364,7 @@ export async function saveProduct(db: DB, input: ProductInput): Promise<Product>
     }
     // Misma función que usa la vista previa del formulario: lo que se muestra es lo que se guarda.
     const { name, origin, quality, caliber } = canonicalizeClass(all, input, existing);
-    if (!name) throw abortWith(tx, 'El nombre de la variedad es obligatorio');
+    if (!name) throw abortWith(tx, 'El nombre del producto es obligatorio');
     const candidate = { name, origin, quality, caliber, unit: input.unit };
     const changedClass = !existing || classificationKey(existing) !== classificationKey(candidate);
     if (changedClass) {
@@ -409,7 +409,7 @@ export async function saveProduct(db: DB, input: ProductInput): Promise<Product>
 export async function setProductActive(db: DB, productId: string, active: boolean): Promise<Product> {
   return runRw(db, ['products'], async (tx) => {
     const p: Product | undefined = await tx.objectStore('products').get(productId);
-    if (!p) throw abortWith(tx, 'Variedad no encontrada');
+    if (!p) throw abortWith(tx, 'Producto no encontrado');
     const updated = { ...p, active, updatedAt: now() };
     await tx.objectStore('products').put(updated);
     return updated;
@@ -422,7 +422,7 @@ export async function setPrice(db: DB, productId: string, priceCents: number): P
   if (priceCents > MAX_PRICE_CENTS) throw new Error('El precio es demasiado alto');
   return runRw(db, ['products'], async (tx) => {
     const p: Product | undefined = await tx.objectStore('products').get(productId);
-    if (!p) throw abortWith(tx, 'Variedad no encontrada');
+    if (!p) throw abortWith(tx, 'Producto no encontrado');
     const updated = { ...p, priceCents, updatedAt: now() };
     await tx.objectStore('products').put(updated);
     return updated;
@@ -453,7 +453,7 @@ export async function moveStock(
     !Number.isSafeInteger(physical) || !Number.isSafeInteger(reserved) ||
     Math.abs(physical) > MAX_STOCK_MILLI || Math.abs(reserved) > MAX_STOCK_MILLI
   ) {
-    throw new Error('El inventario de esta variedad excedería el máximo permitido');
+    throw new Error('El inventario de este producto excedería el máximo permitido');
   }
   const updated: Product = { ...p, physicalMilli: physical, reservedMilli: reserved, updatedAt: at };
   await store.put(updated);
@@ -522,7 +522,7 @@ export async function addStockMove(
   if (qtyMilli > MAX_QTY_MILLI) throw new Error('La cantidad excede el máximo permitido');
   return runRw(db, ['products', 'stockMoves', 'receptions'], async (tx) => {
     const p: Product | undefined = await tx.objectStore('products').get(productId);
-    if (!p) throw abortWith(tx, 'Variedad no encontrada');
+    if (!p) throw abortWith(tx, 'Producto no encontrado');
     const delta =
       type === 'entrada' ? qtyMilli : type === 'merma' ? -qtyMilli : qtyMilli - p.physicalMilli;
     const availableAfter = p.physicalMilli + delta - p.reservedMilli;

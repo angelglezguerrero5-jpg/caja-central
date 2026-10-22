@@ -197,7 +197,7 @@ test.describe('Recepción · kilos netos (casos 8 a 11)', () => {
 
     await page.getByTestId('rec-confirm').click();
     await expect(page.getByTestId('rec-sheet-net')).toHaveAttribute('data-milli', '125000');
-    await expect(page.getByTestId('rec-sheet-detail')).toHaveText('Caja limonera · 10 cajas · 10 cajas × 12.5 kg');
+    await expect(page.getByTestId('rec-sheet-detail')).toHaveText('Caja · 10 cajas · 10 cajas × 12.5 kg');
     await page.getByTestId('rec-confirm-yes').click();
     await expect(toast(page)).toContainText('Recepción R-1 registrada: +125 kg');
 
@@ -206,12 +206,12 @@ test.describe('Recepción · kilos netos (casos 8 a 11)', () => {
       await subTab(page, 'historial');
       const row = page.getByTestId('rec-row').first();
       await expect(row.getByTestId('rec-row-net')).toHaveText('125 kg');
-      await expect(row).toContainText('Caja limonera · 10 cajas · Envases × peso de cada uno (12.5 kg c/u)');
+      await expect(row).toContainText('Caja · 10 cajas · Envases × peso de cada uno (12.5 kg c/u)');
       await subTab(page, 'resumen');
       await page.getByTestId('rep-fold-breakdown').locator('summary').click();
       const pk = page.getByTestId('rep-by-packaging-row');
       await expect(pk).toHaveCount(1);
-      await expect(pk).toContainText('Caja limonera');
+      await expect(pk.locator('span').first()).toHaveText('Caja');
       await expect(pk).toContainText('1 recepción · 10 cajas · 125 kg');
     });
 
@@ -309,7 +309,7 @@ test.describe('Recepción · kilos netos (casos 8 a 11)', () => {
     await page.getByTestId('rec-confirm').click();
     await expect(page.getByTestId('rec-sheet-net')).toHaveAttribute('data-milli', '131250');
     await expect(page.getByTestId('rec-sheet-avg')).toHaveText('Promedio: 26.25 kg por caja (informativo).');
-    await expect(page.getByTestId('rec-sheet-detail')).toHaveText('Caja limonera · 5 cajas · bruto 135.5 kg − tara 4.25 kg');
+    await expect(page.getByTestId('rec-sheet-detail')).toHaveText('Caja · 5 cajas · bruto 135.5 kg − tara 4.25 kg');
     await page.getByTestId('rec-confirm-yes').click();
     await expect(toast(page)).toContainText('Recepción R-1 registrada: +131.25 kg');
 
@@ -547,7 +547,7 @@ test.describe('Recepción · borradores y peso desconocido (caso 13)', () => {
       const row = page.getByTestId('rec-draft-row');
       await expect(row).toHaveCount(1);
       await expect(row).toContainText('Con semilla');
-      await expect(row).toContainText('Caja limonera · 40 cajas');
+      await expect(row).toContainText('Caja · 40 cajas');
       await expect(row).toContainText('Huerta Sur');
       await expect(row).toContainText('Falta: Escribe el peso neto de cada caja');
       await subTab(page, 'resumen');
@@ -1788,10 +1788,10 @@ test.describe('Recepción · negativos de captura (kilos inválidos, negativos, 
     await goReceive(page);
     await typeNet(page, '50');
     await confirmDisabled(page, true);
-    await expect(page.getByTestId('rec-missing')).toContainText('Elige el tipo de limón (variedad y clasificación)');
+    await expect(page.getByTestId('rec-missing')).toContainText('Elige qué producto llegó');
     await tapDisabledConfirm(page);
     await expect(toast(page)).toHaveClass(/error/);
-    await expect(toast(page)).toContainText('Elige el tipo de limón (variedad y clasificación)');
+    await expect(toast(page)).toContainText('Elige qué producto llegó');
     await expect(page.getByTestId('rec-sheet')).toHaveCount(0);
 
     // «Limón persa» tiene Primera y Segunda: elegir solo la variedad no basta
@@ -2887,7 +2887,7 @@ test.describe('Recepción · primer uso, teclado «Ir», unidades y respaldo', (
     await sheet.getByTestId('recnew-name').fill('Limón sin semilla');
     await expect(sheet.getByTestId('recnew-preview')).toContainText('Quedará como: Sin semilla'); // la vista previa dice lo que se GUARDA (se canoniza igual que al guardar)
     await sheet.getByTestId('recnew-add').click();
-    await expect(toast(page)).toContainText('Variedad agregada');
+    await expect(toast(page)).toContainText('Producto agregado');
     await expect(sheet).toBeHidden();
     // al guardar, «Limón sin semilla» se canoniza a la variedad «Sin semilla» (docs/DISENO-CLASIFICACION-RECEPCION.md §2)
     await expect(page.getByTestId('rec-selected')).toContainText('Sin semilla');
@@ -2937,7 +2937,7 @@ test.describe('Recepción · primer uso, teclado «Ir», unidades y respaldo', (
     await page.getByTestId('new-unit').selectOption('pieza');
     await page.getByTestId('new-price').fill('12');
     await page.getByTestId('add-product').click();
-    await expect(toast(page)).toContainText('Variedad agregada');
+    await expect(toast(page)).toContainText('Producto agregado');
     await invRow(page, 'segunda').getByRole('button', { name: 'Ocultar' }).click();
     await expect(invRow(page, 'segunda')).toHaveClass(/inactive/);
 

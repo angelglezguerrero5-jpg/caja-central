@@ -78,7 +78,7 @@ export function ProductChips({
 
   return (
     <>
-      <div class="chips" role="group" aria-label="Variedad">
+      <div class="chips" role="group" aria-label="Producto">
         {[...groups.entries()].map(([key, list]) => {
           const active = key === activeKey && (!!chosen || !allowEmpty);
           return (

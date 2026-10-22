@@ -716,7 +716,7 @@ describe('avisos que hay que reconocer y errores tipados', () => {
   it('si entre el borrador y la confirmación la variedad se ocultó o cambió de unidad, no entra nada', async () => {
     const d = await saveReceptionDraft(db, { id: newId(), productId: p.id, packaging: 'granel', weightMode: 'directo', netDirectMilli: kg(10) });
     await setProductActive(db, p.id, false);
-    await expect(confirmReceptionDraft(db, d.id)).rejects.toThrow(/oculta/);
+    await expect(confirmReceptionDraft(db, d.id)).rejects.toThrow(/oculto/);
     expect(await phys()).toBe(0);
     await setProductActive(db, p.id, true);
     expect((await confirmReceptionDraft(db, d.id)).status).toBe('confirmada');

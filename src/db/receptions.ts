@@ -388,7 +388,7 @@ export async function correctReception(
     const current = currentNetMilli(r);
     if (newNetMilli === current) throw abortWith(tx, 'Los kilos ya son esos: no hay nada que corregir');
     const product: Product | undefined = await tx.objectStore('products').get(r.productId!);
-    if (!product) throw abortWith(tx, 'La variedad de esta recepción ya no existe');
+    if (!product) throw abortWith(tx, 'El producto de esta recepción ya no existe');
     const delta = newNetMilli - current;
     const availableAfter = product.physicalMilli + delta - product.reservedMilli;
     let authorized: number | undefined;
@@ -437,7 +437,7 @@ async function voidInTx(
   if (r.status !== 'confirmada') throw abortWith(tx, 'Solo se anulan recepciones confirmadas');
   const current = currentNetMilli(r);
   const product: Product | undefined = await tx.objectStore('products').get(r.productId!);
-  if (!product) throw abortWith(tx, 'La variedad de esta recepción ya no existe');
+  if (!product) throw abortWith(tx, 'El producto de esta recepción ya no existe');
   const availableAfter = product.physicalMilli - current - product.reservedMilli;
   let authorized: number | undefined;
   if (availableAfter < 0) {

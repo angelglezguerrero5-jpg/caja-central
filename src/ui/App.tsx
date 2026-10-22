@@ -232,6 +232,7 @@ export function App() {
     <Ctx.Provider value={{ db, version, bump, toast: showToast }}>
       <div class="topbar">
         <header class="top">
+          <img src="/icons/logo.svg" alt="" width="32" height="32" class="brand-logo" />
           <strong>{BRAND.name}</strong>
           <span class={online ? 'net on' : 'net off'} data-testid="net" title={online ? undefined : 'La app funciona igual sin internet'}>
             {online ? 'En línea' : 'Sin internet'}

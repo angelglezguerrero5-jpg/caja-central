@@ -14,6 +14,7 @@ function offlineServiceWorker(): Plugin {
     '/icons/apple-touch-icon.png',
     '/icons/icon-192.png',
     '/icons/icon-512.png',
+    '/icons/logo.svg',
     '/icons/maskable-512.png',
   ];
   return {

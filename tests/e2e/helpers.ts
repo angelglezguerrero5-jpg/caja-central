@@ -13,7 +13,7 @@ async function addVariety(page: Page, v: { name: string; quality: string; price:
   await form.getByTestId('new-quality').fill(v.quality);
   await form.getByTestId('new-price').fill(v.price);
   await form.getByTestId('add-product').click();
-  await expect(page.getByTestId('toast')).toContainText('Variedad agregada');
+  await expect(page.getByTestId('toast')).toContainText('Producto agregado');
 }
 
 /** Primera variedad desde el estado vacío de la caja; el resto desde Inventario. */

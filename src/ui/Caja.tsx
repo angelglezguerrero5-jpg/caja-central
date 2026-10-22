@@ -233,7 +233,7 @@ export function Caja({ active = true }: { active?: boolean }) {
     return (
       <section class="caja" data-testid="caja">
         <div data-testid="caja-vacia">
-          <h2>{hiddenCount > 0 ? 'No hay variedades a la vista' : 'Primero configura tus variedades'}</h2>
+          <h2>{hiddenCount > 0 ? 'No hay productos a la vista' : 'Primero agrega tus productos'}</h2>
           {hiddenCount > 0 && (
             <p class="notice" role="status" data-testid="caja-ocultas">
               Tienes {hiddenCount} {hiddenCount === 1 ? 'clasificación oculta' : 'clasificaciones ocultas'}. Para venderla(s) ve a
@@ -241,7 +241,7 @@ export function Caja({ active = true }: { active?: boolean }) {
             </p>
           )}
           <p class="hint">
-            La app no trae variedades ni precios de ejemplo: escribe los tuyos. Después registra la mercancía que llega en
+            La app no trae productos ni precios de ejemplo: escribe los tuyos. Después registra la mercancía que llega en
             Recepción (o tu existencia inicial en Inventario → Entrada manual). Mientras no lo hagas, cada venta pedirá
             autorización por existencia insuficiente.
           </p>

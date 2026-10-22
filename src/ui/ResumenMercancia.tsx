@@ -244,7 +244,7 @@ export function ResumenMercancia() {
 
           <Fold title="Desglose: cuánto llegó, cuánto vendí y cuánto queda" testid="rep-fold-breakdown">
             <p class="hint">«Disponible ahora» es lo que queda hoy en bodega para vender (no depende de las fechas).</p>
-            <Buckets title="Por variedad" rows={report.byVariety} testid="rep-by-variety" />
+            <Buckets title="Por producto" rows={report.byVariety} testid="rep-by-variety" />
             <Buckets title="Por origen" rows={report.byOrigin} testid="rep-by-origin" />
             <Buckets title="Por calidad" rows={report.byQuality} testid="rep-by-quality" />
             <Buckets title="Por calibre o tamaño" rows={report.byCaliber} testid="rep-by-caliber" />

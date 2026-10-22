@@ -150,9 +150,9 @@ describe('normalización y validación', () => {
     const v = (f: ReceptionFields, product: Parameters<typeof validateFields>[1]['product']) =>
       validateFields(normalizeFields(f), { forConfirm: true, now, product });
     expect(v(full, okProduct)).toEqual([]);
-    expect(v({ ...full, productId: undefined }, okProduct)[0]).toMatch(/Elige el tipo de limón/);
+    expect(v({ ...full, productId: undefined }, okProduct)[0]).toMatch(/Elige qué producto llegó/);
     expect(v(full, null)[0]).toMatch(/ya no existe/);
-    expect(v(full, { unit: 'kg', active: false })[0]).toMatch(/oculta/);
+    expect(v(full, { unit: 'kg', active: false })[0]).toMatch(/oculto/);
     expect(v(full, { unit: 'caja', active: true })[0]).toMatch(/por kg/);
     expect(v({ ...full, unitNetMilli: undefined }, okProduct)[0]).toMatch(/peso neto/);
   });

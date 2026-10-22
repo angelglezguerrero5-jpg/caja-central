@@ -334,8 +334,8 @@ describe('un respaldo no puede traer lo que la escritura rechaza', () => {
     const b = await dataset();
     expect(() => validateBackup(b)).not.toThrow();
     // Dinero, precios y cantidades de ventas: el tope es el HISTÓRICO (lo que la versión 1 pudo guardar), no el de captura.
-    expect(bad(b, (x) => (x.products[0].priceCents = HIST_PRICE_CENTS + 1))).toThrow(/variedad nº 1/);
-    expect(bad(b, (x) => (x.products[0].physicalMilli = MAX_STOCK_MILLI + 1))).toThrow(/variedad nº 1/);
+    expect(bad(b, (x) => (x.products[0].priceCents = HIST_PRICE_CENTS + 1))).toThrow(/producto nº 1/);
+    expect(bad(b, (x) => (x.products[0].physicalMilli = MAX_STOCK_MILLI + 1))).toThrow(/producto nº 1/);
     expect(bad(b, (x) => (x.sales[0].items[0].qtyMilli = HIST_QTY_MILLI + 1))).toThrow(/venta nº 1/);
     expect(bad(b, (x) => (x.sales[0].totalCents = HIST_MONEY_CENTS + 1))).toThrow(/venta nº 1/);
     expect(bad(b, (x) => (x.shifts[0].openingCashCents = HIST_MONEY_CENTS + 1))).toThrow(/turno nº 1/);
@@ -559,7 +559,7 @@ describe('vista previa de los avisos (solo lectura)', () => {
 
   it('errores de captura se devuelven sin lanzar; un intento ya registrado se reporta (igual o distinto)', async () => {
     const empty = await previewReceptionWarnings(db, { id: newId(), packaging: 'granel', weightMode: 'directo', netDirectMilli: kg(10) });
-    expect(empty.errors.join(' ')).toMatch(/Elige el tipo de limón/);
+    expect(empty.errors.join(' ')).toMatch(/Elige qué producto llegó/);
     const input = direct(80);
     const saved = await confirmReception(db, input);
     const same = await previewReceptionWarnings(db, input);

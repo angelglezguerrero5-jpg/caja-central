@@ -120,7 +120,7 @@ test.describe('Catálogo clasificado · alta por la interfaz', () => {
     await first.getByTestId('new-price').fill('28');
     let n = await toastCount(page);
     await first.getByTestId('add-product').click();
-    await expectNewToast(page, n, 'Variedad agregada');
+    await expectNewToast(page, n, 'Producto agregado');
     await expect(page.getByTestId('caja-vacia')).toHaveCount(0);
     await expect(page.getByTestId('selling')).toHaveText(`Vendiendo: ${SIN}`);
     await expect(page.getByTestId('price')).toHaveValue('28');
@@ -133,7 +133,7 @@ test.describe('Catálogo clasificado · alta por la interfaz', () => {
     await form.getByTestId('new-price').fill('33');
     n = await toastCount(page);
     await form.getByTestId('add-product').click();
-    await expectNewToast(page, n, 'Variedad agregada');
+    await expectNewToast(page, n, 'Producto agregado');
 
     expect(await invLabels(page)).toEqual([SIN, CON]);
     await expect(invRow(page, SIN).locator('header span')).toHaveText('$28.00/kg');
@@ -163,7 +163,7 @@ test.describe('Catálogo clasificado · alta por la interfaz', () => {
     await form.getByTestId('new-price').fill('25');
     let n = await toastCount(page);
     await form.getByTestId('add-product').click();
-    await expectNewToast(page, n, 'Variedad agregada');
+    await expectNewToast(page, n, 'Producto agregado');
 
     // Michoacán escrito sin acento y en minúsculas → se guarda con la ortografía del catálogo
     await addClass(page, { name: CON, origin: 'michoacan', price: '28' });
@@ -219,13 +219,13 @@ test.describe('Catálogo clasificado · alta por la interfaz', () => {
     await form.getByTestId('new-price').fill('18');
     let n = await toastCount(page);
     await form.getByTestId('add-product').click();
-    await expectNewToast(page, n, 'Variedad agregada');
+    await expectNewToast(page, n, 'Producto agregado');
     await chipIn(form, 'size', '2X').click();
     await form.getByTestId('new-price').fill('25');
     await form.getByTestId('new-name').fill(SIN);
     n = await toastCount(page);
     await form.getByTestId('add-product').click();
-    await expectNewToast(page, n, 'Variedad agregada');
+    await expectNewToast(page, n, 'Producto agregado');
     await addClass(page, { name: SIN, caliber: '3X', price: '32' });
 
     expect(await invLabels(page)).toEqual([`${SIN} · 1X`, `${SIN} · 2X`, `${SIN} · 3X`]);
@@ -253,7 +253,7 @@ test.describe('Catálogo clasificado · alta por la interfaz', () => {
     await form.getByTestId('new-price').fill('40');
     let n = await toastCount(page);
     await form.getByTestId('add-product').click();
-    await expectNewToast(page, n, 'Variedad agregada');
+    await expectNewToast(page, n, 'Producto agregado');
     await addClass(page, { name: SIN, caliber: '300', price: '36' });
     await addClass(page, { name: SIN, caliber: '400', price: '30' });
     await addClass(page, { name: SIN, caliber: ' 500 ', price: '24' }); // con espacios: se recorta
@@ -282,7 +282,7 @@ test.describe('Catálogo clasificado · alta por la interfaz', () => {
     await form.getByTestId('new-price').fill('35');
     const n = await toastCount(page);
     await form.getByTestId('add-product').click();
-    await expectNewToast(page, n, 'Variedad agregada');
+    await expectNewToast(page, n, 'Producto agregado');
     await addClass(page, { name: SIN, quality: 'segunda', price: '28' }); // minúscula → ortografía del catálogo
     await addClass(page, { name: SIN, quality: 'TERCERA', price: '20' });
 
@@ -346,7 +346,7 @@ test.describe('Catálogo clasificado · valores propios, no especificados y camp
     await form.getByTestId('new-price').fill('31');
     const n = await toastCount(page);
     await form.getByTestId('add-product').click();
-    await expectNewToast(page, n, 'Variedad agregada');
+    await expectNewToast(page, n, 'Producto agregado');
 
     // Es OTRA clasificación (sin procedencia): no pisó a «Con semilla · Oaxaca» y su etiqueta no muestra «No especificada».
     expect(await invLabels(page)).toEqual([`${CON} · Oaxaca`, CON]);
@@ -382,7 +382,7 @@ test.describe('Catálogo clasificado · valores propios, no especificados y camp
     let n = await toastCount(page);
     await form.getByTestId('new-no-price').check();
     await form.getByTestId('add-product').click();
-    await expectNewToast(page, n, /nombre de la variedad es obligatorio/i, 'error');
+    await expectNewToast(page, n, /nombre del producto es obligatorio/i, 'error');
     // Negativo 2: con variedad pero sin precio y sin marcar «Sin precio todavía» tampoco.
     await form.getByTestId('new-no-price').uncheck();
     await form.getByTestId('new-name').fill(SIN);
@@ -397,7 +397,7 @@ test.describe('Catálogo clasificado · valores propios, no especificados y camp
     await expect(form.getByTestId('new-price')).toBeDisabled();
     n = await toastCount(page);
     await form.getByTestId('add-product').click();
-    await expectNewToast(page, n, 'Variedad agregada');
+    await expectNewToast(page, n, 'Producto agregado');
     expect(await invLabels(page)).toEqual([SIN]);
     await expect(invRow(page, SIN).locator('header span')).toHaveText('Sin precio');
 
@@ -432,7 +432,7 @@ test.describe('Catálogo clasificado · valores propios, no especificados y camp
     await expect(form.getByTestId('new-preview')).toHaveText(`Quedará como: ${label}`);
     const n = await toastCount(page);
     await form.getByTestId('add-product').click();
-    await expectNewToast(page, n, 'Variedad agregada');
+    await expectNewToast(page, n, 'Producto agregado');
     await expect(invRow(page, label)).toHaveCount(1);
     await addStock(page, label, '50');
 
@@ -550,7 +550,7 @@ test.describe('No inventar · sin equivalencias, sin calidades deducidas, sin su
     await form.getByTestId('new-price').fill('45');
     const n = await toastCount(page);
     await form.getByTestId('add-product').click();
-    await expectNewToast(page, n, 'Variedad agregada');
+    await expectNewToast(page, n, 'Producto agregado');
     const after = await snapshotInventory(page);
     expect(after.slice(0, before.length)).toEqual(before);
     expect(after).toHaveLength(before.length + 1);
@@ -602,7 +602,7 @@ test.describe('Canonización y vista previa de lo escrito', () => {
       const preview = norm(await form.getByTestId('new-preview').innerText());
       const n = await toastCount(page);
       await form.getByTestId('add-product').click();
-      await expectNewToast(page, n, 'Variedad agregada');
+      await expectNewToast(page, n, 'Producto agregado');
       const label = (await invLabels(page)).at(-1);
       expect(label, 'lo guardado').toBe(stored);
       expect(preview, `la vista previa de «${typed.name} · ${typed.origin ?? ''} · ${typed.quality ?? ''} · ${typed.caliber ?? ''}»`).toBe(`Quedará como: ${stored}`);
@@ -699,12 +699,12 @@ test.describe('Sin duplicados accidentales', () => {
     await expect(form.getByTestId('new-dup')).toHaveCount(0);
     let n = await toastCount(page);
     await form.getByTestId('add-product').click();
-    await expectNewToast(page, n, 'Variedad agregada');
+    await expectNewToast(page, n, 'Producto agregado');
     await fillForm(form, { ...base, quality: 'Segunda', price: '24' });
     await expect(form.getByTestId('new-dup')).toHaveCount(0);
     n = await toastCount(page);
     await form.getByTestId('add-product').click();
-    await expectNewToast(page, n, 'Variedad agregada');
+    await expectNewToast(page, n, 'Producto agregado');
     const after = await snapshotInventory(page);
     expect(after).toHaveLength(3);
     expect(after[0]).toEqual(before[0]); // la original sigue igual: precio $30.00 y 25 kg
@@ -718,7 +718,7 @@ test.describe('Sin duplicados accidentales', () => {
     await fillForm(form, { name: SIN, quality: 'Primera', price: '30' });
     const n = await toastCount(page);
     await form.getByTestId('add-product').dblclick();
-    await expectNewToast(page, n, 'Variedad agregada');
+    await expectNewToast(page, n, 'Producto agregado');
     // Viaje de ida y vuelta a la base: lo que se lee ya incluye cualquier segundo intento.
     await tab(page, 'caja');
     await tab(page, 'inventario');
@@ -742,7 +742,7 @@ test.describe('Alta y elección de clasificaciones desde Recepción', () => {
     await expect(sheet.getByTestId('recnew-preview')).toHaveText(`Quedará como: ${SIN} · 2X`);
     let n = await toastCount(page);
     await sheet.getByTestId('recnew-add').click();
-    await expectNewToast(page, n, 'Variedad agregada');
+    await expectNewToast(page, n, 'Producto agregado');
     await expect(sheet).toHaveCount(0);
     await expect(page.getByTestId('rec-selected')).toContainText(`${SIN} · 2X`);
     await expect(page.getByTestId('rec-selected')).toContainText('sin precio todavía');
@@ -904,7 +904,7 @@ test.describe('Edición y ocultar/activar', () => {
     await patchForm(form, { quality: 'Primera' });
     await expect(form.getByTestId('edit-dup')).toHaveCount(0);
     // Variedad vacía.
-    await attempt({ name: '   ' }, /nombre de la variedad es obligatorio/i, 'variedad vacía');
+    await attempt({ name: '   ' }, /nombre del producto es obligatorio/i, 'variedad vacía');
     await patchForm(form, { name: SIN });
     // Precio vacío, cero o negativo.
     for (const bad of ['', '0', '-4']) await attempt({ price: bad }, /Escribe el precio por unidad/, `precio «${bad}»`);
@@ -2068,22 +2068,22 @@ test.describe('Negativos · lo que no debe guardarse', () => {
       await expectNewToast(page, n, error, 'error');
       await expect(invRows(page), `${why}: no debe haber guardado nada`).toHaveCount(0);
     };
-    await attempt({ name: '' }, /nombre de la variedad es obligatorio/i, 'variedad vacía');
-    await attempt({ name: '     ' }, /nombre de la variedad es obligatorio/i, 'variedad de solo espacios');
-    await attempt({ name: `Sin${bell}semilla` }, /Variedad: contiene caracteres no permitidos/, 'campana (control) en variedad');
-    await attempt({ name: 'Sin\tsemilla' }, /Variedad: contiene caracteres no permitidos/, 'tabulador en variedad');
+    await attempt({ name: '' }, /nombre del producto es obligatorio/i, 'variedad vacía');
+    await attempt({ name: '     ' }, /nombre del producto es obligatorio/i, 'variedad de solo espacios');
+    await attempt({ name: `Sin${bell}semilla` }, /Producto: contiene caracteres no permitidos/, 'campana (control) en variedad');
+    await attempt({ name: 'Sin\tsemilla' }, /Producto: contiene caracteres no permitidos/, 'tabulador en variedad');
     await attempt({ name: SIN, origin: `Oax${zeroWidth}aca` }, /Procedencia: contiene caracteres no permitidos/, 'espacio de ancho cero en procedencia');
     await attempt({ name: SIN, quality: `Pri${rtl}mera` }, /Calidad: contiene caracteres no permitidos/, 'inversión de texto en calidad');
     await attempt({ name: SIN, caliber: `2${lineSep}X` }, /Calibre: contiene caracteres no permitidos/, 'separador de línea en calibre');
-    await attempt({ name: 'v'.repeat(41) }, /Variedad: máximo 40 caracteres/, 'variedad de 41');
+    await attempt({ name: 'v'.repeat(41) }, /Producto: máximo 40 caracteres/, 'variedad de 41');
     await attempt({ name: SIN, origin: 'o'.repeat(41) }, /Procedencia: máximo 40 caracteres/, 'procedencia de 41');
     await attempt({ name: SIN, quality: 'q'.repeat(41) }, /Calidad: máximo 40 caracteres/, 'calidad de 41');
     await attempt({ name: SIN, caliber: 'c'.repeat(41) }, /Calibre: máximo 40 caracteres/, 'calibre de 41');
     // Texto larguísimo: se rechaza y la pantalla no se desborda ni se rompe (vista previa incluida).
-    await attempt({ name: 'x'.repeat(5000) }, /Variedad: máximo 40 caracteres/, 'variedad de 5000');
+    await attempt({ name: 'x'.repeat(5000) }, /Producto: máximo 40 caracteres/, 'variedad de 5000');
     expect(await overflowing(page)).toEqual([]);
     await expect(page.getByTestId('fatal')).toHaveCount(0);
-    await expect(page.getByText('Aún no hay variedades')).toBeVisible();
+    await expect(page.getByText('Aún no hay productos')).toBeVisible();
     await tab(page, 'caja');
     await expect(page.getByTestId('caja-vacia')).toBeVisible(); // la Caja sigue sin nada que vender
 
@@ -2138,7 +2138,7 @@ test.describe('Negativos · lo que no debe guardarse', () => {
     await expect(form.getByTestId('new-preview')).toHaveText(`Quedará como: ${SIN} · Primera (por caja)`);
     let n = await toastCount(page);
     await form.getByTestId('add-product').click();
-    await expectNewToast(page, n, 'Variedad agregada');
+    await expectNewToast(page, n, 'Producto agregado');
     // La MISMA clasificación en kg es otro producto (la unidad forma parte de la identidad).
     await addClass(page, { name: SIN, quality: 'Primera', price: '30' });
     // Pero repetir la misma clasificación en la misma unidad sí es un duplicado.
@@ -2520,7 +2520,7 @@ test.describe('Persistencia y respaldo del catálogo clasificado', () => {
     await p2.getByTestId('import-file').setInputFiles(file);
     await expect(p2.getByTestId('restore-sheet')).toBeVisible();
     await expect(p2.getByTestId('restore-summary')).toContainText('3 ventas');
-    await expect(p2.getByTestId('restore-summary')).toContainText('3 variedades');
+    await expect(p2.getByTestId('restore-summary')).toContainText('3 productos');
     const n = await toastCount(p2);
     await p2.getByTestId('restore-confirm').click();
     await expectNewToast(p2, n, 'Respaldo restaurado');
@@ -2617,7 +2617,7 @@ for (const phone of PHONES) {
       await watchTaps(page);
       await form.getByTestId('add-product').tap();
       await expectSolidTap(page, 'add-product');
-      await expect(page.getByTestId('toast')).toContainText('Variedad agregada');
+      await expect(page.getByTestId('toast')).toContainText('Producto agregado');
       await hideKeyboard(page, phone);
       await expect(html(page)).not.toHaveClass(/kbd/);
       await expect(page.getByTestId('tab-inventario')).toBeVisible();

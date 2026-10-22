@@ -393,7 +393,7 @@ describe('inventario', () => {
     const ajuste = (await listStockMoves(db, p.id)).find((m) => m.type === 'ajuste')!;
     expect(ajuste.deltaMilli).toBe(-kg(3));
     await expect(addStockMove(db, p.id, 'entrada', 0)).rejects.toThrow();
-    await expect(addStockMove(db, 'nope', 'entrada', 1)).rejects.toThrow('no encontrada');
+    await expect(addStockMove(db, 'nope', 'entrada', 1)).rejects.toThrow('no encontrado');
   });
 });
 
@@ -498,7 +498,7 @@ describe('respaldo', () => {
     await expect(importBackup(db, cantidadNegativa)).rejects.toThrow('venta nº 1');
     const unidadRara = structuredClone(base) as unknown as { products: Array<Record<string, unknown>> };
     unidadRara.products[0].unit = 'tonelada';
-    await expect(importBackup(db, unidadRara)).rejects.toThrow('variedad nº 1');
+    await expect(importBackup(db, unidadRara)).rejects.toThrow('producto nº 1');
     expect((await exportBackup(db)).sales).toHaveLength(1); // seguimos con los datos originales
   });
 

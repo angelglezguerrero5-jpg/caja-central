@@ -278,6 +278,8 @@ main:focus { outline: none; }
 }
 
 /* ---- menú de los tres puntos (Vales y Recepción) ---- */
+/* Logo decorativo (alt vacío) junto al nombre: el gap de .top los separa; el <strong> conserva solo el nombre. */
+.brand-logo { width: 32px; height: 32px; border-radius: 8px; flex: none; display: block; }
 .top .net { margin-left: auto; }
 .menu-btn { position: relative; width: 48px; min-height: 48px; padding: 0; border-radius: 12px; background: var(--card-2);
   border-color: var(--line-strong); color: var(--text); display: flex; align-items: center; justify-content: center; }

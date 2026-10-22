@@ -337,12 +337,12 @@ export function Mas() {
             <strong>{pending.kind === 'undo' ? 'La copia interna trae' : 'El respaldo trae'}</strong>
             {pending.backup.exportedAt && ` (guardada ${fmtDateTime(pending.backup.exportedAt)})`}:{' '}
             {count(pending.backup.sales.length, 'venta', 'ventas')}, {count(pending.backup.receptions.length, 'recepción', 'recepciones')},{' '}
-            {count(pending.backup.products.length, 'variedad', 'variedades')}, {count(pending.backup.stockMoves.length, 'movimiento de inventario', 'movimientos de inventario')}
+            {count(pending.backup.products.length, 'producto', 'productos')}, {count(pending.backup.stockMoves.length, 'movimiento de inventario', 'movimientos de inventario')}
             {pending.backup.freights.length > 0 && `, ${count(pending.backup.freights.length, 'flete', 'fletes')}`}.
           </p>
           <p data-testid="restore-current">
             <strong>Hoy tienes</strong>: {count(pending.current.sales.length, 'venta', 'ventas')},{' '}
-            {count(pending.current.receptions.length, 'recepción', 'recepciones')}, {count(pending.current.products.length, 'variedad', 'variedades')},{' '}
+            {count(pending.current.receptions.length, 'recepción', 'recepciones')}, {count(pending.current.products.length, 'producto', 'productos')},{' '}
             {count(pending.current.stockMoves.length, 'movimiento de inventario', 'movimientos de inventario')}
             {pending.current.freights.length > 0 && `, ${count(pending.current.freights.length, 'flete', 'fletes')}`}.
           </p>

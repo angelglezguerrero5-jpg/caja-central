@@ -120,7 +120,7 @@ describe('auditoría de movimientos de inventario', () => {
     // movimiento duplicado (mismo id)
     expect(issues((c) => c.stockMoves.push({ ...c.stockMoves[0] }))).toMatch(/identificador repetido/);
     // movimiento de una variedad inexistente
-    expect(issues((c) => (mv(c, 'entrada').productId = 'fantasma'))).toMatch(/variedad que no existe/);
+    expect(issues((c) => (mv(c, 'entrada').productId = 'fantasma'))).toMatch(/producto que no existe/);
   });
 
   it('un renglón con importe fuera de rango se reporta como inconsistencia, sin lanzar', async () => {

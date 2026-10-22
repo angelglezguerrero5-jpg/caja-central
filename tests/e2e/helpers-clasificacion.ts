@@ -156,7 +156,7 @@ export async function addClass(page: Page, c: ClassSpec) {
   await fillForm(form, c);
   const n = await toastCount(page);
   await form.getByTestId('add-product').click();
-  await expectNewToast(page, n, 'Variedad agregada');
+  await expectNewToast(page, n, 'Producto agregado');
   await expect(form.getByTestId('new-name'), 'el formulario debe limpiarse solo si se guardó').toHaveValue('');
 }
 

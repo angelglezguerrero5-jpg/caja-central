@@ -125,7 +125,7 @@ test('primer arranque: la app no inventa variedades ni precios; se configura des
 
   await empty.getByTestId('new-price').fill('27.5');
   await empty.getByTestId('add-product').click();
-  await expect(page.getByTestId('toast')).toContainText('Variedad agregada');
+  await expect(page.getByTestId('toast')).toContainText('Producto agregado');
   await expect(page.getByTestId('caja-vacia')).toHaveCount(0);
   await expect(page.getByTestId('price')).toHaveValue('27.50'); // el precio que escribió el usuario, no uno inventado
   await expect(page.getByTestId('variety')).toHaveCount(1);

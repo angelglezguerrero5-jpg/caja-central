@@ -177,7 +177,7 @@ describe('edición, unidad y estado', () => {
     const p = await mk({ name: 'Sin semilla', quality: 'Primera', priceCents: 0, pendingPrice: true });
     const off = await setProductActive(db, p.id, false);
     expect(off).toMatchObject({ active: false, priceCents: 0, quality: 'Primera' });
-    await expect(setProductActive(db, 'no-existe', true)).rejects.toThrow(/no encontrada/);
+    await expect(setProductActive(db, 'no-existe', true)).rejects.toThrow(/no encontrado/);
   });
 });
 

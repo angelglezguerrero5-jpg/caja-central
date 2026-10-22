@@ -88,7 +88,7 @@ export function NuevaVariedad({ initial, onSaved, onCancel, idPrefix = 'new', fi
         setNoPrice(!!defaultNoPrice);
         setUnit(fixedUnit ?? 'kg'); // cada alta empieza en kg: la unidad de la anterior no se hereda
       }
-      toast(editing ? 'Clasificación actualizada' : 'Variedad agregada');
+      toast(editing ? 'Clasificación actualizada' : 'Producto agregado');
       bump();
       onSaved?.(saved);
     } catch (e) {
