@@ -22,7 +22,7 @@ describe('copia de emergencia (lectura cruda)', () => {
     db.close();
 
     const dump = await dumpRawDatabase(name);
-    expect(dump).toMatchObject({ app: 'sistema-venta-limones', kind: 'emergency-raw-dump', database: name, version: 3 });
+    expect(dump).toMatchObject({ app: 'caja-central', kind: 'emergency-raw-dump', database: name, version: 3 });
     expect(dump.stores.products).toHaveLength(1);
     expect(dump.stores.sales).toHaveLength(1);
     expect(dump.stores.receptions).toHaveLength(1);

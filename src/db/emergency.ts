@@ -1,3 +1,4 @@
+import { BRAND } from '../brand';
 import { DB_NAME } from './repo';
 
 /**
@@ -9,7 +10,7 @@ import { DB_NAME } from './repo';
  * El formato (stores crudos) NO es el del respaldo normal: es para recuperación asistida.
  */
 export interface RawDump {
-  app: 'sistema-venta-limones';
+  app: typeof BRAND.id;
   kind: 'emergency-raw-dump';
   exportedAt: string;
   database: string;
@@ -50,7 +51,7 @@ export function dumpRawDatabase(name = DB_NAME): Promise<RawDump> {
         const stores: Record<string, unknown[]> = {};
         if (names.length === 0) {
           db.close();
-          return resolve({ app: 'sistema-venta-limones', kind: 'emergency-raw-dump', exportedAt: new Date().toISOString(), database: name, version: db.version, stores });
+          return resolve({ app: BRAND.id, kind: 'emergency-raw-dump', exportedAt: new Date().toISOString(), database: name, version: db.version, stores });
         }
         const tx = db.transaction(names, 'readonly');
         let pending = names.length;
@@ -60,7 +61,7 @@ export function dumpRawDatabase(name = DB_NAME): Promise<RawDump> {
             stores[n] = all.result as unknown[];
             if (--pending === 0) {
               db.close();
-              resolve({ app: 'sistema-venta-limones', kind: 'emergency-raw-dump', exportedAt: new Date().toISOString(), database: name, version: db.version, stores });
+              resolve({ app: BRAND.id, kind: 'emergency-raw-dump', exportedAt: new Date().toISOString(), database: name, version: db.version, stores });
             }
           };
           all.onerror = () => {

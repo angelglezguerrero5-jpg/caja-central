@@ -1,3 +1,4 @@
+import { BRAND } from '../brand';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import {
   DuplicateFreightError,
@@ -102,7 +103,7 @@ const draftOf = (f: Freight): Draft => ({
   reason: '',
 });
 
-const LS_FORM = 'limones.flete.form.v1';
+const LS_FORM = `${BRAND.ns}.flete.form.v1`;
 function lsGet(): Draft | null {
   try {
     const raw = localStorage.getItem(LS_FORM);

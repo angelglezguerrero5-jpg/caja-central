@@ -7,7 +7,7 @@ export const WEIGHT_MODES: readonly WeightMode[] = ['directo', 'por_envase', 'br
 
 export const PACKAGING_LABEL: Record<Packaging, string> = {
   granel: 'A granel',
-  caja: 'Caja limonera',
+  caja: 'Caja',
   arpilla: 'Arpilla',
 };
 /** Sustantivo para mensajes: "10 cajas", "3 arpillas". */
@@ -22,7 +22,7 @@ export const WEIGHT_MODE_LABEL: Record<WeightMode, string> = {
   bruto_tara: 'Bruto − tara',
 };
 /** Aclaración que se muestra junto a bruto / tara / neto (lenguaje del andén). */
-export const WEIGHT_GLOSSARY = 'Bruto = con la caja o el costal · Tara = la caja o el costal vacío · Neto = solo el limón';
+export const WEIGHT_GLOSSARY = 'Bruto = con la caja o el costal · Tara = la caja o el costal vacío · Neto = solo la mercancía';
 
 /** Una sola recepción no puede pasar de esto (sensatez + seguridad numérica). */
 export const MAX_NET_MILLI = MAX_QTY_MILLI;

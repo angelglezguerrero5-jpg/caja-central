@@ -1,3 +1,4 @@
+import { BRAND } from '../brand';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import {
   availableMilli,
@@ -23,9 +24,9 @@ const METHODS: Array<[PaymentMethod, string]> = [
   ['transferencia', 'Transferencia'],
   ['tarjeta', 'Tarjeta'],
 ];
-const LS_VARIETY = 'limones.variety';
-const LS_RECENT = 'limones.recent';
-const LS_LAST_BY_VARIETY = 'limones.lastByVariety';
+const LS_VARIETY = `${BRAND.ns}.variety`;
+const LS_RECENT = `${BRAND.ns}.recent`;
+const LS_LAST_BY_VARIETY = `${BRAND.ns}.lastByVariety`;
 
 function lsGet(k: string): string | null {
   try {

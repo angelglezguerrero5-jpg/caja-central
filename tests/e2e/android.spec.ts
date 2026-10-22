@@ -926,7 +926,7 @@ for (const phone of PHONES) {
       // Exportar: el archivo trae TODO y el aviso lo cuenta
       const [dl] = await Promise.all([page.waitForEvent('download'), page.getByTestId('export').tap()]);
       const file = JSON.parse(readFileSync(await dl.path(), 'utf8'));
-      expect(file.app).toBe('sistema-venta-limones');
+      expect(file.app).toBe('caja-central');
       expect(file.version).toBe(3); // formato actual (el 3 agregó los fletes)
       expect(file.freights, 'sin fletes capturados, la lista va vacía').toEqual([]);
       for (const k of ['products', 'sales', 'shifts', 'cashMovements', 'stockMoves', 'receptions'] as const) expect(file[k], k).toHaveLength(b[k].length);
@@ -2504,7 +2504,7 @@ test.describe('Android · accesibilidad básica · 360×640', () => {
     expect(n).toBeGreaterThan(0);
     for (let i = 0; i < n; i++) await expect(remove.nth(i)).toHaveAttribute('aria-label', `Quitar la pesada ${i + 1}`);
     // Las pestañas con borradores dicen cuántos hay a los lectores de pantalla (el número visual va oculto)
-    await expect(page.getByTestId('tab-recepcion')).toHaveAttribute('aria-label', `Recepción, ${market.facts.drafts} borradores pendientes`);
+    await expect(page.getByTestId('menu-btn')).toHaveAttribute('aria-label', `Más secciones, ${market.facts.drafts} borradores pendientes`);
   });
 
   test('Los campos de texto tienen una etiqueta visible o aria-label (no solo texto de ayuda que desaparece al escribir)', async ({ page }) => {

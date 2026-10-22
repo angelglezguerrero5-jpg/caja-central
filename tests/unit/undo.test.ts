@@ -68,7 +68,7 @@ describe('restauración: copia interna previa y folios que no bajan', () => {
       const info = await saveUndoSnapshot(await emptyBackup(), 'una', name);
       expect(Object.keys(info).sort()).toEqual(['at', 'id', 'moves', 'products', 'reason', 'receptions', 'sales']);
       expect(Object.keys((await listUndoSnapshots(name))[0]).sort()).toEqual(Object.keys(info).sort());
-      expect((await loadUndoSnapshot(info.id, name))?.app).toBe('sistema-venta-limones');
+      expect((await loadUndoSnapshot(info.id, name))?.app).toBe('caja-central');
     });
 
     it('copias guardadas por una versión anterior (sin contador) se conservan, se ordenan por fecha y quedan por debajo de las nuevas', async () => {

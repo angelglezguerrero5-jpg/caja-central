@@ -29,7 +29,7 @@ const freight = (over: Rec = {}): Rec => ({
 });
 
 const base = (over: Rec = {}): Rec => ({
-  app: 'sistema-venta-limones',
+  app: 'caja-central',
   version: 3,
   exportedAt: '2026-10-14T18:00:00.000Z',
   products: [],

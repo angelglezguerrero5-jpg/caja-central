@@ -68,7 +68,7 @@ test.describe('iPhone · paquete instalable (archivos y metas)', () => {
         links: document.querySelectorAll('link[rel="apple-touch-icon"]').length,
       };
     });
-    expect(head).toMatchObject({ capable: 'yes', webCapable: 'yes', title: 'Limones', status: 'black-translucent', sizes: '180x180', href: '/icons/apple-touch-icon.png', links: 1 });
+    expect(head).toMatchObject({ capable: 'yes', webCapable: 'yes', title: 'Caja', status: 'black-translucent', sizes: '180x180', href: '/icons/apple-touch-icon.png', links: 1 });
     expect(head.viewport).toContain('viewport-fit=cover');
     expect(head.viewport, 'no se debe impedir el zoom (accesibilidad)').not.toMatch(/user-scalable\s*=\s*no|maximum-scale/);
     expect(head.detect).toContain('telephone=no');
@@ -85,7 +85,7 @@ test.describe('iPhone · paquete instalable (archivos y metas)', () => {
 
   test('el manifest está completo, no bloquea la orientación y cada ícono mide exactamente lo que declara', async ({ request }) => {
     const m = await (await request.get('/manifest.webmanifest')).json();
-    expect(m).toMatchObject({ id: '/', name: 'Venta de Limones', short_name: 'Limones', start_url: '/', scope: '/', display: 'standalone', lang: 'es-MX' });
+    expect(m).toMatchObject({ id: '/', name: 'Caja Central', short_name: 'Caja', start_url: '/', scope: '/', display: 'standalone', lang: 'es-MX' });
     expect(m.short_name.length, 'el nombre bajo el ícono debe ser corto').toBeLessThanOrEqual(12);
     expect(m.orientation ?? 'any', 'el teléfono debe poder girar').toBe('any');
     expect(m.theme_color).toMatch(/^#[0-9a-f]{6}$/i);
@@ -116,7 +116,7 @@ test.describe('iPhone · paquete instalable (archivos y metas)', () => {
     const before = await snapshot();
     const names = Object.keys(before);
     expect(names, 'una sola caché, con versión').toHaveLength(1);
-    expect(names[0]).toMatch(/^limones-[0-9a-f]{12}$/);
+    expect(names[0]).toMatch(/^caja-central-[0-9a-f]{12}$/);
     expect(before[names[0]], 'la caché contiene exactamente el precache del build').toEqual([...precache].sort());
 
     await sellCash(page, '1', [50]);
@@ -581,7 +581,7 @@ test.describe('iPhone · respaldo con la hoja de compartir', () => {
     const calls = await page.evaluate(() => (window as unknown as { __shares: Array<{ inGesture: boolean; files: number; name: string }> }).__shares);
     expect(calls).toHaveLength(1);
     expect(calls[0]).toMatchObject({ inGesture: true, files: 1 });
-    expect(calls[0].name).toMatch(/^respaldo-limones-\d{4}-\d{2}-\d{2}-\d{4}\.json$/);
+    expect(calls[0].name).toMatch(/^respaldo-caja-central-\d{4}-\d{2}-\d{2}-\d{4}\.json$/);
     expect(descargas, 'no hizo falta descargar nada').toBe(0);
     await expect(page.getByTestId('last-backup')).toContainText('Último respaldo: hoy');
   });
@@ -621,13 +621,13 @@ test.describe('iPhone · actualizar la PWA no borra los registros', () => {
 
       // «Se publica una versión nueva»: cambia el service worker (otra versión de caché)
       const swPath = join(copy, 'sw.js');
-      writeFileSync(swPath, readFileSync(swPath, 'utf8').replace(/limones-[0-9a-f]{12}/, 'limones-nueva0000001'));
+      writeFileSync(swPath, readFileSync(swPath, 'utf8').replace(/caja-central-[0-9a-f]{12}/, 'caja-central-nueva0000001'));
       await page.evaluate(async () => {
         const reg = await navigator.serviceWorker.getRegistration();
         await reg!.update();
       });
       await expect(page.getByTestId('new-version')).toBeVisible({ timeout: 20_000 });
-      await expect.poll(() => page.evaluate(async () => (await caches.keys()).sort()), { message: 'la caché vieja se borró y quedó la nueva' }).toEqual(['limones-nueva0000001']);
+      await expect.poll(() => page.evaluate(async () => (await caches.keys()).sort()), { message: 'la caché vieja se borró y quedó la nueva' }).toEqual(['caja-central-nueva0000001']);
       // No se recarga sola: lo que se esté capturando no se pierde
       await expect(page.getByTestId('caja')).toBeVisible();
       await expect(page.getByTestId('new-version')).toContainText('Tus datos no se tocan');
@@ -668,10 +668,10 @@ test.describe('iPhone · la conexión a la base se recupera sola', () => {
     const before = await readDb(page);
     expect(before.sales).toHaveLength(1);
 
-    const count = () => page.evaluate(() => (window.__idbConns ?? []).filter((c) => c.name === 'venta-limones').length);
+    const count = () => page.evaluate(() => (window.__idbConns ?? []).filter((c) => c.name === 'caja-central').length);
     const opened = await count();
     // El sistema cierra la conexión de la app (aquí la prueba la cierra desde fuera)
-    await page.evaluate(() => (window.__idbConns ?? []).filter((c) => c.name === 'venta-limones').forEach((c) => c.close()));
+    await page.evaluate(() => (window.__idbConns ?? []).filter((c) => c.name === 'caja-central').forEach((c) => c.close()));
     // La persona vuelve a la app: el sistema avisa que ya es visible otra vez
     await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
     await expect.poll(count, { message: 'la app debió abrir una conexión nueva' }).toBeGreaterThan(opened);

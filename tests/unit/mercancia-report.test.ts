@@ -216,15 +216,15 @@ describe('reporte de mercancía (Fase E)', () => {
   });
 
   it('una misma variedad con dos ortografías (dato anterior y chip nuevo) es UN solo grupo; calibres 3X vs 300 nunca se mezclan', () => {
-    const legacy = prod('l', 'Limón con semilla', { physicalMilli: kg(10) });
+    const legacy = prod('l', 'CON semilla', { physicalMilli: kg(10) });
     const fresh = prod('f', 'Con semilla', { origin: 'Oaxaca', physicalMilli: kg(5) });
     const x3 = prod('x', 'Sin semilla', { caliber: '3 X', physicalMilli: kg(7) });
     const n3 = prod('n', 'Sin semilla', { caliber: '300', physicalMilli: kg(9) });
     const r = buildMerchandiseReport(input({ products: [legacy, fresh, x3, n3] }));
     expect(r.byVariety.filter((b) => /semilla/i.test(b.label))).toHaveLength(2); // Con semilla y Sin semilla
-    const con = r.byVariety.find((b) => /^(Limón )?con semilla$/i.test(b.label))!;
+    const con = r.byVariety.find((b) => /^con semilla$/i.test(b.label))!;
     expect(con.physicalMilli).toBe(kg(15));
-    expect(con.label).toBe('Limón con semilla'); // la primera ortografía vista
+    expect(con.label).toBe('CON semilla'); // la primera ortografía vista
     expect(r.byCaliber.map((b) => b.label).sort()).toEqual(['3 X', '300', 'No especificado']);
     expect(r.byCaliber.find((b) => b.label === '3 X')!.physicalMilli).toBe(kg(7));
     expect(r.byCaliber.find((b) => b.label === '300')!.physicalMilli).toBe(kg(9));
@@ -239,11 +239,11 @@ describe('reporte de mercancía (Fase E)', () => {
   });
 
   it('ventas anteriores a la clasificación (sin foto): se agrupan por el nombre con que se vendieron, nunca por la clasificación de hoy', () => {
-    // P2 hoy es "Con semilla · Oaxaca · Segunda · 300", pero la venta antigua solo guardó "Limón con semilla"
-    const legacySale = sale({ id: 'v1', day: '2026-10-10' }, [{ p: { ...P2, name: 'Limón con semilla' }, q: kg(25) }]);
+    // P2 hoy es "Con semilla · Oaxaca · Segunda · 300", pero la venta antigua solo guardó "con semilla"
+    const legacySale = sale({ id: 'v1', day: '2026-10-10' }, [{ p: { ...P2, name: 'con semilla' }, q: kg(25) }]);
     const r = buildMerchandiseReport(input({ sales: [legacySale] }));
     expect(r.legacySoldMilli).toBe(kg(25));
-    expect(r.byVariety.find((b) => b.label === 'Con semilla')).toMatchObject({ soldMilli: kg(25) }); // misma variedad (clave sin "Limón")
+    expect(r.byVariety.find((b) => b.label === 'Con semilla')).toMatchObject({ soldMilli: kg(25) }); // misma variedad (clave sin acentos ni mayúsculas)
     expect(r.byOrigin.find((b) => b.label === 'Oaxaca')!.soldMilli).toBe(0);
     expect(r.byOrigin.find((b) => b.label === 'No especificada')!.soldMilli).toBe(kg(25));
     expect(r.byQuality.find((b) => b.label === 'Sin clasificar')!.soldMilli).toBe(kg(25));

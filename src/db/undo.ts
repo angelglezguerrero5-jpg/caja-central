@@ -1,3 +1,4 @@
+import { BRAND } from '../brand';
 import { openDB } from 'idb';
 import type { Backup } from '../domain/types';
 import { newId } from './repo';
@@ -8,7 +9,7 @@ import { newId } from './repo';
  * «deshacer» si se eligió el archivo equivocado. No sustituye a exportar respaldos: vive en el mismo teléfono y se
  * borra si se borran los datos de la app.
  */
-export const UNDO_DB = 'venta-limones-undo';
+export const UNDO_DB = `${BRAND.id}-undo`;
 const KEEP = 3;
 
 export interface UndoInfo {

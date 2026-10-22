@@ -100,9 +100,9 @@ export async function readDb(page: Page): Promise<Dump> {
   return page.evaluate(async () => {
     const empty = { products: [], receptions: [], stockMoves: [], sales: [], shifts: [], cashMovements: [], meta: [] };
     const known = await indexedDB.databases();
-    if (!known.some((d) => d.name === 'venta-limones')) return empty as never;
+    if (!known.some((d) => d.name === 'caja-central')) return empty as never;
     return new Promise<never>((resolve, reject) => {
-      const open = indexedDB.open('venta-limones');
+      const open = indexedDB.open('caja-central');
       open.onerror = () => reject(open.error);
       open.onsuccess = () => {
         const db = open.result;
@@ -390,7 +390,7 @@ export const localDayOf = (page: Page, offsetMs = 0): Promise<string> => localIn
 
 // ─────────────────────────────── captura en curso guardada sola ───────────────────────────────
 
-export const FORM_KEY = 'limones.rec.form.v1';
+export const FORM_KEY = 'cc.rec.form.v1';
 
 /** Espera a que la captura en curso se haya guardado sola (el guardado se retrasa ~300 ms) y la devuelve. */
 export async function autosaved(page: Page): Promise<Record<string, unknown>> {

@@ -82,14 +82,14 @@ if (problems.length === 0) {
     need(list.includes(ref), `index.html usa ${ref} pero no está en el precache`);
   }
   for (const i of m.icons ?? []) need(list.includes(i.src), `el ícono ${i.src} del manifest no está en el precache`);
-  need(/const CACHE = 'limones-[0-9a-f]{12}'/.test(sw), 'la caché del service worker debe llevar versión (limones-<hash>)');
+  need(/const CACHE = 'caja-central-[0-9a-f]{12}'/.test(sw), 'la caché del service worker debe llevar versión (caja-central-<hash>)');
   // Seguridad de la caché: solo se precachea lo estático del build. Nada de guardar respuestas de la red al vuelo
   // (en esta app los datos viven en IndexedDB, no en cachés), nada de peticiones que no sean GET ni de otros orígenes.
   need(!/\.put\(/.test(sw) && !/\.add\(/.test(sw), 'el service worker no debe guardar respuestas al vuelo (put/add con cualquier nombre de caché): solo el precache del build');
   need(/req\.method !== 'GET'/.test(sw), 'el service worker debe ignorar peticiones que no sean GET');
   need(/url\.origin !== self\.location\.origin/.test(sw), 'el service worker debe ignorar otros orígenes');
-  need(/k\.startsWith\('limones-'\)/.test(sw), 'el service worker solo debe borrar sus propias cachés (prefijo limones-)');
-  console.log(`precache: ${list.length} archivos · versión ${sw.match(/limones-[0-9a-f]+/)[0]}`);
+  need(/k\.startsWith\('caja-central-'\)/.test(sw), 'el service worker solo debe borrar sus propias cachés (prefijo caja-central-)');
+  console.log(`precache: ${list.length} archivos · versión ${sw.match(/caja-central-[0-9a-f]+/)[0]}`);
 }
 
 if (problems.length) {

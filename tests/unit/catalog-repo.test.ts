@@ -81,8 +81,8 @@ describe('sin duplicados por diferencias de escritura', () => {
     await mk({ name: 'Sin semilla', origin: 'Michoacán', quality: 'Primera', caliber: '2X' });
     for (const dup of [
       { name: 'sin semilla', origin: 'michoacan', quality: 'primera', caliber: '2x' },
-      { name: '  Limón   SIN semilla ', origin: 'MICHOACÁN', quality: ' Primera', caliber: '2X ' },
-      { name: 'Limon sin semilla', origin: 'Michoacán', quality: 'Primera', caliber: '2X' },
+      { name: '  SIN   semilla ', origin: 'MICHOACÁN', quality: ' Primera', caliber: '2X ' },
+      { name: 'Sín semilla', origin: 'Michoacán', quality: 'Primera', caliber: '2X' },
     ]) {
       await expect(mk(dup), JSON.stringify(dup)).rejects.toThrow(/Ya existe esa clasificación/);
     }
@@ -98,8 +98,8 @@ describe('sin duplicados por diferencias de escritura', () => {
   });
 
   it('canoniza al guardar: usa la ortografía ya existente o la del preset', async () => {
-    await mk({ name: 'Sin semilla', quality: 'Torreones' });
-    const a = await mk({ name: 'Limón con semilla', origin: 'oaxaca', quality: 'tercera', caliber: '3x' });
+    await mk({ name: 'Sin semilla', origin: 'Oaxaca', quality: 'Torreones', caliber: '3X' });
+    const a = await mk({ name: 'Con semilla', origin: 'oaxaca', quality: 'tercera', caliber: '3x' });
     expect(a).toMatchObject({ name: 'Con semilla', origin: 'Oaxaca', quality: 'Tercera', caliber: '3X' });
     const b = await mk({ name: 'Con semilla', origin: 'Oaxaca', quality: 'torreones', caliber: '500' });
     expect(b.quality).toBe('Torreones'); // reutiliza la ortografía del valor ya usado

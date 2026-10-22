@@ -1,3 +1,4 @@
+import { BRAND } from '../brand';
 import { openDB, type DBSchema, type IDBPDatabase, type IDBPTransaction } from 'idb';
 import { checkPayment, toSaleItems } from '../domain/cart';
 import {
@@ -32,7 +33,7 @@ import type {
 
 type MetaKey = 'nextFolio' | 'nextValeFolio' | 'nextReceptionFolio' | 'currentShiftId' | 'cartDraft' | 'freightSettings';
 
-interface LimonesDB extends DBSchema {
+interface AppDB extends DBSchema {
   products: { key: string; value: Product };
   sales: {
     key: string;
@@ -51,9 +52,9 @@ interface LimonesDB extends DBSchema {
   meta: { key: MetaKey; value: { key: MetaKey; value: unknown } };
 }
 
-export type DB = IDBPDatabase<LimonesDB>;
+export type DB = IDBPDatabase<AppDB>;
 
-export const DB_NAME = 'venta-limones';
+export const DB_NAME: string = BRAND.id;
 export const DB_VERSION = 3;
 
 // Las migraciones trabajan con el API crudo de idb (sin el esquema tipado): tocan versiones viejas.
@@ -151,7 +152,7 @@ export function openDatabase(name = DB_NAME, opts: OpenOptions = {}): Promise<DB
   const migrations = { ...MIGRATIONS, ...opts.migrations };
   let ref: DB | undefined;
   let upgradedFrom: number | undefined;
-  return openDB<LimonesDB>(name, version, {
+  return openDB<AppDB>(name, version, {
     upgrade(db, oldVersion, _newVersion, tx) {
       tx.done.catch(() => undefined); // si una migración falla, el error llega por openDB
       for (let v = oldVersion + 1; v <= version; v++) {
@@ -941,7 +942,7 @@ export async function exportBackup(db: DB): Promise<Backup> {
   await tx.done;
   const stored = settings?.value as FreightSettings | undefined;
   return {
-    app: 'sistema-venta-limones',
+    app: BRAND.id,
     version: 3,
     exportedAt: now(),
     products,

@@ -1,15 +1,16 @@
 import type { Classification, Product, Unit } from './types';
 
 /**
- * Clasificación comercial del limón. Las listas son SOLO atajos (chips que rellenan un campo de texto):
- * el usuario puede escribir cualquier otro valor. No hay equivalencias entre 1X/2X/3X y 200–500,
- * ni se deduce calidad o precio de la procedencia: son etiquetas, no reglas.
+ * Clasificación comercial de un producto de la Central (chayote, jitomate, limón…). Las listas son SOLO atajos (chips que
+ * rellenan un campo de texto): el usuario puede escribir cualquier otro valor, y lo que ya usó aparece como sugerencia.
+ * Producto y origen no traen atajos porque dependen del negocio. No se deduce calidad ni precio de la procedencia:
+ * son etiquetas, no reglas.
  */
-export const VARIETY_PRESETS = ['Sin semilla', 'Con semilla'] as const;
-export const ORIGIN_PRESETS = ['Oaxaca', 'Michoacán'] as const;
+export const VARIETY_PRESETS = [] as const;
+export const ORIGIN_PRESETS = [] as const;
 export const QUALITY_PRESETS = ['Primera', 'Segunda', 'Tercera'] as const;
-export const SIZE_PRESETS = ['1X', '2X', '3X'] as const;
-export const CALIBER_NUMBER_PRESETS = ['200', '300', '400', '500'] as const;
+export const SIZE_PRESETS = ['Chico', 'Mediano', 'Grande'] as const;
+export const CALIBER_NUMBER_PRESETS = [] as const;
 export const CALIBER_PRESETS = [...SIZE_PRESETS, ...CALIBER_NUMBER_PRESETS] as const;
 
 /** Textos con los que la interfaz representa "sin dato". Se guardan como campo ausente. */
@@ -31,17 +32,14 @@ export function normalizeKey(s: string | undefined | null): string {
     .trim();
 }
 
-/**
- * Clave de la variedad: además ignora un "limón"/"limones" inicial ("Limón sin semilla" ≡ "Sin semilla"),
- * con o sin guion.
- */
+/** Clave del producto: sin acentos, minúsculas y espacios colapsados. */
 export function varietyKey(s: string | undefined | null): string {
-  return normalizeKey(s).replace(/^limon(es)?(\s*[-–]\s*|\s+)/, '');
+  return normalizeKey(s);
 }
 
 /**
  * Clave del calibre: sin espacios internos, sin prefijo "calibre"/"cal."/"#" y con "×" como "x"
- * ("3 X" ≡ "3X", "Calibre 300" ≡ "300"). NUNCA mezcla los tamaños (1X/2X/3X) con los números (200–500).
+ * ("3 X" ≡ "3X", "Calibre 300" ≡ "300"). NUNCA mezcla los tamaños (Chico/Mediano/Grande, 1X/2X) con los números (200–500).
  */
 export function caliberKey(s: string | undefined | null): string {
   return normalizeKey(s)

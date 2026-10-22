@@ -1,3 +1,4 @@
+import { BRAND } from '../brand';
 import { FREIGHT_WEIGHT_MODES, MAX_FREIGHT_NET_MILLI, validateFreightSettings } from '../domain/freight';
 import { HIST_MONEY_CENTS, HIST_PRICE_CENTS, HIST_QTY_MILLI, MAX_STOCK_MILLI } from '../domain/money';
 import { MAX_CONTAINERS, MAX_NET_MILLI, MAX_WEIGHINGS } from '../domain/reception';
@@ -246,7 +247,7 @@ function uniq(label: string, ids: Array<string | number>, what = 'id'): void {
 
 export function validateBackup(data: unknown): Backup {
   const b = data as Record<string, unknown> | null;
-  if (!isRec(b) || b.app !== 'sistema-venta-limones' || (b.version !== 1 && b.version !== 2 && b.version !== 3)) {
+  if (!isRec(b) || b.app !== BRAND.id || (b.version !== 1 && b.version !== 2 && b.version !== 3)) {
     throw new Error('El archivo no es un respaldo válido de esta app');
   }
   for (const k of ['products', 'sales', 'shifts', 'cashMovements', 'stockMoves'] as const) {
@@ -317,7 +318,7 @@ export function validateBackup(data: unknown): Backup {
   if (nextRec <= maxRec) throw new Error('Respaldo inconsistente: el folio de recepción siguiente ya fue usado');
 
   return {
-    app: 'sistema-venta-limones',
+    app: BRAND.id,
     version: 3,
     exportedAt: typeof b.exportedAt === 'string' ? b.exportedAt.slice(0, 64) : '',
     products,

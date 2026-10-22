@@ -123,7 +123,7 @@ test.describe('Exportar y restaurar en otro dispositivo (caso 18, 23, 25)', () =
     const file = await exportBackupUi(page);
     await expectToast(page, 'Respaldo exportado (2 ventas, 5 recepciones)');
     const b = file.json;
-    expect(b).toMatchObject({ app: 'sistema-venta-limones', version: 3, nextFolio: 3, nextValeFolio: 2, nextReceptionFolio: 4 });
+    expect(b).toMatchObject({ app: 'caja-central', version: 3, nextFolio: 3, nextValeFolio: 2, nextReceptionFolio: 4 });
     expect(b.exportedAt).toMatch(ISO);
     for (const k of [...V1_STORES, 'receptions']) expect(byId(b[k]), `«${k}» del archivo`).toEqual(byId(rowsOf(src, k)));
     expect(b.receptions).toHaveLength(5);
@@ -291,11 +291,11 @@ test.describe('Exportar y restaurar en otro dispositivo (caso 18, 23, 25)', () =
     const tagAfter = await localTag();
     const t1 = Date.now();
 
-    // Nombre: respaldo-limones-AAAA-MM-DD-HHMM.json con la hora LOCAL (la de la Ciudad de México en el navegador)
-    expect(file.filename).toMatch(/^respaldo-limones-\d{4}-\d{2}-\d{2}-\d{4}\.json$/);
-    expect([tagBefore, tagAfter]).toContain(file.filename.replace(/^respaldo-limones-/, '').replace(/\.json$/, ''));
+    // Nombre: respaldo-caja-central-AAAA-MM-DD-HHMM.json con la hora LOCAL (la de la Ciudad de México en el navegador)
+    expect(file.filename).toMatch(/^respaldo-caja-central-\d{4}-\d{2}-\d{2}-\d{4}\.json$/);
+    expect([tagBefore, tagAfter]).toContain(file.filename.replace(/^respaldo-caja-central-/, '').replace(/\.json$/, ''));
     // Contenido: igual a lo guardado, con sus contadores
-    expect(file.json).toMatchObject({ app: 'sistema-venta-limones', version: 3, nextFolio: 3, nextValeFolio: 2, nextReceptionFolio: 4 });
+    expect(file.json).toMatchObject({ app: 'caja-central', version: 3, nextFolio: 3, nextValeFolio: 2, nextReceptionFolio: 4 });
     expect(Date.parse(file.json.exportedAt)).toBeGreaterThanOrEqual(t0 - 2000);
     expect(Date.parse(file.json.exportedAt)).toBeLessThanOrEqual(t1 + 2000);
     for (const k of [...V1_STORES, 'receptions']) expect(byId(file.json[k]), `«${k}» del archivo`).toEqual(byId(rowsOf(raw, k)));
@@ -314,7 +314,7 @@ test.describe('Exportar y restaurar en otro dispositivo (caso 18, 23, 25)', () =
   test('e) exportar con la base vacía (recién instalada) produce un respaldo válido que se puede restaurar', async ({ page }) => {
     await openApp(page, { seed: false });
     const file = await exportBackupUi(page);
-    expect(file.json).toMatchObject({ app: 'sistema-venta-limones', version: 3, nextFolio: 1, nextValeFolio: 1, nextReceptionFolio: 1 });
+    expect(file.json).toMatchObject({ app: 'caja-central', version: 3, nextFolio: 1, nextValeFolio: 1, nextReceptionFolio: 1 });
     for (const k of [...V1_STORES, 'receptions']) expect(file.json[k], `«${k}» vacía`).toEqual([]);
     await expectToast(page, 'Respaldo exportado (0 ventas, 0 recepciones)');
     await chooseBackup(page, uploadOf(file));
@@ -679,10 +679,10 @@ test.describe('Compartir el respaldo (API de compartir SIMULADA)', () => {
     expect(enviado).toHaveLength(1);
     expect(enviado[0].title).toBe('Respaldo de Venta de Limones');
     expect(enviado[0].files).toHaveLength(1);
-    expect(enviado[0].files[0].name).toMatch(/^respaldo-limones-\d{4}-\d{2}-\d{2}-\d{4}\.json$/);
+    expect(enviado[0].files[0].name).toMatch(/^respaldo-caja-central-\d{4}-\d{2}-\d{2}-\d{4}\.json$/);
     expect(enviado[0].files[0].type).toBe('application/json');
     const json = JSON.parse(enviado[0].files[0].text);
-    expect(json).toMatchObject({ app: 'sistema-venta-limones', version: 3, nextFolio: 3, nextValeFolio: 2, nextReceptionFolio: 4 });
+    expect(json).toMatchObject({ app: 'caja-central', version: 3, nextFolio: 3, nextValeFolio: 2, nextReceptionFolio: 4 });
     const raw = await readRawDb(page);
     for (const k of [...V1_STORES, 'receptions']) expect(byId(json[k]), `«${k}» compartida`).toEqual(byId(rowsOf(raw, k)));
     await expect(page.getByTestId('last-backup')).toContainText('Último respaldo: hoy');
@@ -872,7 +872,7 @@ test.describe('Respaldos corruptos: se rechazan SIN perder nada (caso 20)', () =
       const w = window as unknown as { __fallarEn?: string };
       const put = IDBObjectStore.prototype.put;
       IDBObjectStore.prototype.put = function (this: IDBObjectStore, ...args: Parameters<IDBObjectStore['put']>) {
-        if (w.__fallarEn && this.name === w.__fallarEn && this.transaction.db.name === 'venta-limones') {
+        if (w.__fallarEn && this.name === w.__fallarEn && this.transaction.db.name === 'caja-central') {
           throw new DOMException('almacenamiento lleno simulado', 'QuotaExceededError');
         }
         return put.apply(this, args);

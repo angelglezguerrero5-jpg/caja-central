@@ -27,7 +27,7 @@ function offlineServiceWorker(): Plugin {
         .digest('hex')
         .slice(0, 12);
       const source = `// Generado en build. No editar.
-const CACHE = 'limones-${hash}';
+const CACHE = 'caja-central-${hash}';
 const PRECACHE = ${JSON.stringify(urls, null, 2)};
 
 self.addEventListener('install', (e) => {
@@ -39,8 +39,8 @@ self.addEventListener('install', (e) => {
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys()
-      // Solo las cachés propias (prefijo limones-): otras aplicaciones del mismo origen no se tocan.
-      .then((keys) => Promise.all(keys.filter((k) => k.startsWith('limones-') && k !== CACHE).map((k) => caches.delete(k))))
+      // Solo las cachés propias (prefijo caja-central-): otras aplicaciones del mismo origen no se tocan.
+      .then((keys) => Promise.all(keys.filter((k) => k.startsWith('caja-central-') && k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim()),
   );
 });

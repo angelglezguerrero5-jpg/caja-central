@@ -1,3 +1,4 @@
+import { BRAND } from '../brand';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { openDatabase, type DB } from '../db/repo';
 import { Ctx, errMsg } from './ctx';
@@ -12,13 +13,16 @@ import { InstallNotice, InstallSheet } from './Instalar';
 import { isIOS, isStandalone } from './platform';
 
 type Tab = 'caja' | 'vales' | 'recepcion' | 'inventario' | 'corte' | 'mas';
+/** Pestañas de arriba. Recepción y Más viven en el menú de los tres puntos (MENU_ITEMS). */
 const TABS: Array<[Tab, string, string]> = [
   ['caja', 'Caja', '🛒'],
   ['vales', 'Vales', '🎟️'],
-  ['recepcion', 'Recepción', '🚚'],
   ['inventario', 'Inventario', '📦'],
   ['corte', 'Corte', '🧾'],
-  ['mas', 'Más', '⋯'],
+];
+const MENU_ITEMS: Array<[Tab, string, string]> = [
+  ['recepcion', 'Recepción de mercancía', '🚚'],
+  ['mas', 'Más (respaldo y ayuda)', '⚙️'],
 ];
 
 /** Qué decirle a la persona cuando la base no abre (sin jerga y sin culparla). */
@@ -39,6 +43,13 @@ export function App() {
   const [upgradedFrom, setUpgradedFrom] = useState<number | null>(null);
   const [newVersion, setNewVersion] = useState(false);
   const [tab, setTabState] = useState<Tab>('caja');
+  const [menuOpen, setMenuOpen] = useState(false);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setMenuOpen(false);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [menuOpen]);
   const [version, setVersion] = useState(0);
   const [drafts, setDrafts] = useState(0);
   const [toast, setToast] = useState<{ id: number; msg: string; kind: 'ok' | 'error' } | null>(null);
@@ -138,12 +149,12 @@ export function App() {
     const onUpdate = () => setNewVersion(true);
     window.addEventListener('online', on);
     window.addEventListener('offline', off);
-    window.addEventListener('limones:update', onUpdate);
+    window.addEventListener(`${BRAND.ns}:update`, onUpdate);
     return () => {
       window.removeEventListener('unhandledrejection', onRejection);
       window.removeEventListener('online', on);
       window.removeEventListener('offline', off);
-      window.removeEventListener('limones:update', onUpdate);
+      window.removeEventListener(`${BRAND.ns}:update`, onUpdate);
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('pageshow', probe);
       window.removeEventListener('focus', probe);
@@ -152,7 +163,7 @@ export function App() {
 
   // Varias ventanas de la app (p. ej. la instalada y una pestaña del navegador) comparten la base: cuando una escribe,
   // las demás refrescan lo que muestran (la base ya es la misma; solo faltaba avisarles).
-  const channel = useMemo(() => (typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel('limones-db')), []);
+  const channel = useMemo(() => (typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel(`${BRAND.id}-db`)), []);
   useEffect(() => {
     if (!channel) return;
     channel.onmessage = () => setVersion((v) => v + 1);
@@ -219,12 +230,72 @@ export function App() {
 
   return (
     <Ctx.Provider value={{ db, version, bump, toast: showToast }}>
-      <header class="top">
-        <strong>🍋 Venta de Limones</strong>
-        <span class={online ? 'net on' : 'net off'} data-testid="net" title={online ? undefined : 'La app funciona igual sin internet'}>
-          {online ? 'En línea' : 'Sin internet'}
-        </span>
-      </header>
+      <div class="topbar">
+        <header class="top">
+          <strong>{BRAND.name}</strong>
+          <span class={online ? 'net on' : 'net off'} data-testid="net" title={online ? undefined : 'La app funciona igual sin internet'}>
+            {online ? 'En línea' : 'Sin internet'}
+          </span>
+          <button
+            class={tab === 'recepcion' || tab === 'mas' ? 'menu-btn active' : 'menu-btn'}
+            data-testid="menu-btn"
+            aria-label={drafts > 0 ? `Más secciones, ${drafts} ${drafts === 1 ? 'borrador pendiente' : 'borradores pendientes'}` : 'Más secciones'}
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((o) => !o)}
+          >
+            <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+            {drafts > 0 && (
+              <span class="count" data-testid="menu-count" aria-hidden="true">
+                {drafts}
+              </span>
+            )}
+          </button>
+        </header>
+        <nav class="tabs" aria-label="Secciones">
+          {TABS.map(([id, label, icon]) => (
+            <button
+              key={id}
+              class={tab === id ? 'tab active' : 'tab'}
+              data-testid={`tab-${id}`}
+              aria-current={tab === id ? 'page' : undefined}
+              onClick={() => setTab(id)}
+            >
+              <span class="ico" aria-hidden="true">{icon}</span>
+              <span class="lbl">{label}</span>
+            </button>
+          ))}
+        </nav>
+        {menuOpen && (
+          <>
+            <div class="menu-backdrop" data-testid="menu-backdrop" onClick={() => setMenuOpen(false)} />
+            <div class="menu" role="menu" aria-label="Más secciones" data-testid="menu">
+              {MENU_ITEMS.map(([id, label, icon]) => (
+                <button
+                  key={id}
+                  role="menuitem"
+                  class={tab === id ? 'menu-item active' : 'menu-item'}
+                  data-testid={`menu-${id}`}
+                  aria-current={tab === id ? 'page' : undefined}
+                  aria-label={id === 'recepcion' && drafts > 0 ? `${label}, ${drafts} ${drafts === 1 ? 'borrador pendiente' : 'borradores pendientes'}` : label}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setTab(id);
+                  }}
+                >
+                  <span class="ico" aria-hidden="true">{icon}</span>
+                  <span class="lbl">{label}</span>
+                  {id === 'recepcion' && drafts > 0 && (
+                    <span class="count inline" data-testid="menu-recepcion-count" aria-hidden="true">
+                      {drafts}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
       {upgradedFrom !== null && (
         <div class="notice upgraded" role="status" data-testid="upgraded">
           {upgradedFrom < 2 ? (
@@ -279,26 +350,6 @@ export function App() {
         {tab === 'corte' && <Corte />}
         {tab === 'mas' && <Mas />}
       </main>
-      <nav class="tabs" aria-label="Secciones">
-        {TABS.map(([id, label, icon]) => (
-          <button
-            key={id}
-            class={tab === id ? 'tab active' : 'tab'}
-            data-testid={`tab-${id}`}
-            aria-current={tab === id ? 'page' : undefined}
-            aria-label={id === 'recepcion' && drafts > 0 ? `${label}, ${drafts} ${drafts === 1 ? 'borrador pendiente' : 'borradores pendientes'}` : label}
-            onClick={() => setTab(id)}
-          >
-            <span class="ico" aria-hidden="true">{icon}</span>
-            <span class="lbl">{label}</span>
-            {id === 'recepcion' && drafts > 0 && (
-              <span class="count" data-testid="tab-recepcion-count" aria-hidden="true">
-                {drafts}
-              </span>
-            )}
-          </button>
-        ))}
-      </nav>
       {installHelp && <InstallSheet onClose={() => setInstallHelp(false)} />}
       {toast && (
         <div class={`toast ${toast.kind}`} role="status" data-testid="toast">

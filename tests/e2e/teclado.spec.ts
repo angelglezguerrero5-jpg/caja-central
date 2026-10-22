@@ -184,7 +184,7 @@ for (const phone of PHONES) {
       await page.getByTestId('rec-net-direct').fill('120');
       await showKeyboard(page, phone);
       await expect(html(page)).toHaveClass(/kbd/);
-      await expect(page.getByTestId('tab-recepcion')).toBeHidden();
+      await expect(page.locator('.topbar'), 'con el teclado abierto la barra de arriba deja de estar fija y no tapa lo que se escribe').toHaveCSS('position', 'static');
 
       // La barra de registro baja al borde de la ventana y el botón queda completo a la vista.
       const dock = await rectOf(page.getByTestId('rec-dock'));

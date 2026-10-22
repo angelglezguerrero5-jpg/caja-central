@@ -18,8 +18,8 @@ import { charge, tab } from './helpers';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Rec = Record<string, any>;
 
-export const DB_NAME = 'venta-limones';
-export const UNDO_DB_NAME = 'venta-limones-undo';
+export const DB_NAME = 'caja-central';
+export const UNDO_DB_NAME = 'caja-central-undo';
 
 // ═══════════════════════════════════════════ IndexedDB «a pelo» ═══════════════════════════════════════════
 
@@ -302,7 +302,7 @@ export function edgeV1(): Rec {
   ];
   const cashMovements = [{ id: 'c1', shiftId: 'e-turno', createdAt: edgeAt('15:30'), type: 'salida', amountCents: 2_000, concept: 'hielo' }];
   return {
-    app: 'sistema-venta-limones', version: 1, exportedAt: edgeAt('15:40'),
+    app: 'caja-central', version: 1, exportedAt: edgeAt('15:40'),
     products, sales, shifts, cashMovements, stockMoves, nextFolio: 4, nextValeFolio: 2,
   };
 }
@@ -385,7 +385,7 @@ export function richV2(): LegacyBackup {
   const shifts: Shift[] = [{ id: 'sh-1', openedAt: richAt(0), openingCashCents: 20_000 }];
   const cashMovements: CashMovement[] = [{ id: 'cm-1', shiftId: 'sh-1', createdAt: richAt(12), type: 'salida', amountCents: 1_500, concept: 'bolsas' }];
   return {
-    app: 'sistema-venta-limones', version: 2, exportedAt: richAt(60),
+    app: 'caja-central', version: 2, exportedAt: richAt(60),
     products, sales, shifts, cashMovements, stockMoves, receptions, nextFolio: 3, nextValeFolio: 2, nextReceptionFolio: 4,
   };
 }
@@ -408,7 +408,7 @@ export function simpleV2(n: number, exportedAt = '2026-01-16T00:00:00.000Z'): Le
     stockMoves.push({ id: `sv-m${i}`, productId: 'sv-p', createdAt: '2026-01-15T16:00:00.000Z', type: 'venta', deltaMilli: -1000, reservedDeltaMilli: 0, note: `Folio ${i}`, saleId: `sv-s${i}` });
   }
   return {
-    app: 'sistema-venta-limones', version: 2, exportedAt,
+    app: 'caja-central', version: 2, exportedAt,
     products: [{ id: 'sv-p', name: 'Limón persa', quality: 'Primera', unit: 'kg', priceCents: 3000, active: true, sort: 0, physicalMilli: 10_000_000 - n * 1000, reservedMilli: 0, updatedAt: '2026-01-15T16:00:00.000Z' }],
     sales,
     shifts: [{ id: 'sv-sh', openedAt: '2026-01-15T14:00:00.000Z', openingCashCents: 0 }],

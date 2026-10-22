@@ -619,7 +619,7 @@ export function buildMarket(opts: MarketOptions = {}): Market {
   const recs = (st: Reception['status']) => receptions.filter((r) => r.status === st);
 
   const backup: LegacyBackup = {
-    app: 'sistema-venta-limones',
+    app: 'caja-central',
     version: 2,
     exportedAt: iso(ago(2 * DAY)),
     products,
@@ -702,7 +702,7 @@ export async function readDb(page: Page): Promise<Dump> {
   return page.evaluate(
     () =>
       new Promise<Dump>((resolve, reject) => {
-        const open = indexedDB.open('venta-limones');
+        const open = indexedDB.open('caja-central');
         open.onerror = () => reject(open.error);
         open.onsuccess = () => {
           const db = open.result;

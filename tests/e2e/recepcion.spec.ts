@@ -469,7 +469,7 @@ test.describe('Recepción · pesadas de cero (negativo de captura)', () => {
     await page.getByTestId('rec-supplier').fill('Rancho que no debe perderse');
     // La captura en curso se guarda sola… o debería: con una pesada de cero la guardada se descarta entera al leerla.
     await expect
-      .poll(() => page.evaluate((k) => localStorage.getItem(k), 'limones.rec.form.v1'), { message: 'la captura debería guardarse sola' })
+      .poll(() => page.evaluate((k) => localStorage.getItem(k), 'cc.rec.form.v1'), { message: 'la captura debería guardarse sola' })
       .not.toBeNull();
     await page.reload();
     await goReceive(page);
@@ -535,8 +535,8 @@ test.describe('Recepción · borradores y peso desconocido (caso 13)', () => {
     });
 
     await test.step('contador en la pestaña y en la subpestaña; el inventario sigue en cero', async () => {
-      await expect(page.getByTestId('tab-recepcion-count')).toHaveText('1');
-      await expect(page.getByTestId('tab-recepcion')).toHaveAttribute('aria-label', 'Recepción, 1 borrador pendiente');
+      await expect(page.getByTestId('menu-count')).toHaveText('1');
+      await expect(page.getByTestId('menu-btn')).toHaveAttribute('aria-label', 'Más secciones, 1 borrador pendiente');
       await expect(page.getByTestId('rec-sub-borradores')).toHaveText('Borradores (1)');
       await expectStock(page, 'semilla', { physical: '0 g', available: '0 g' });
       await expect(invRow(page, 'semilla').getByTestId('stock-recibido')).toHaveCount(0); // ni un movimiento
@@ -574,7 +574,7 @@ test.describe('Recepción · borradores y peso desconocido (caso 13)', () => {
     await setPackaging(page, 'caja');
     await page.getByTestId('rec-containers').fill('40');
     await page.getByTestId('rec-save-draft').click();
-    await expect(page.getByTestId('tab-recepcion-count')).toHaveText('1');
+    await expect(page.getByTestId('menu-count')).toHaveText('1');
     const draftId = (await readDb(page)).receptions[0].id;
 
     await subTab(page, 'borradores');
@@ -591,7 +591,7 @@ test.describe('Recepción · borradores y peso desconocido (caso 13)', () => {
     await expectNet(page, 730000, '730 kg');
     await register(page, 'Recepción R-1 registrada: +730 kg');
 
-    await expect(page.getByTestId('tab-recepcion-count')).toHaveCount(0);
+    await expect(page.getByTestId('menu-count')).toHaveCount(0);
     await expect(page.getByTestId('rec-sub-borradores')).toHaveText('Borradores');
     await subTab(page, 'borradores');
     await expect(page.getByTestId('rec-draft-row')).toHaveCount(0);
@@ -633,7 +633,7 @@ test.describe('Recepción · borradores y peso desconocido (caso 13)', () => {
     await page.getByTestId('rec-draft-cancel-yes').click();
     await expect(toast(page)).toContainText('Borrador descartado: no cambió el inventario');
     await expect(page.getByTestId('rec-draft-row')).toHaveCount(0);
-    await expect(page.getByTestId('tab-recepcion-count')).toHaveCount(0);
+    await expect(page.getByTestId('menu-count')).toHaveCount(0);
 
     await test.step('queda en el historial como descartada, sin kilos', async () => {
       await subTab(page, 'historial');
@@ -687,7 +687,7 @@ test.describe('Recepción · borradores y peso desconocido (caso 13)', () => {
     await expect(page.getByTestId('rec-supplier')).toHaveValue('');
 
     // lo que se estaba capturando quedó como borrador: hay DOS y ninguno suma al inventario
-    await expect(page.getByTestId('tab-recepcion-count')).toHaveText('2');
+    await expect(page.getByTestId('menu-count')).toHaveText('2');
     await subTab(page, 'borradores');
     await expect(page.getByTestId('rec-draft-row')).toHaveCount(2);
     await expect(page.getByTestId('rec-draft-row').filter({ hasText: 'Rancho de paso' })).toContainText('Limón persa · Primera');
@@ -1939,7 +1939,7 @@ test.describe('Recepción · persistencia y sin conexión (casos 17 y 22)', () =
       await expect(histRow(page, 1).getByTestId('rec-row-net')).toHaveText('100 kg');
     });
     await test.step('el borrador sigue y el contador de la pestaña también', async () => {
-      await expect(page.getByTestId('tab-recepcion-count')).toHaveText('1');
+      await expect(page.getByTestId('menu-count')).toHaveText('1');
       await subTab(page, 'borradores');
       await expect(page.getByTestId('rec-draft-row')).toHaveCount(1);
       await expect(page.getByTestId('rec-draft-row')).toContainText('Limón persa · Segunda');
@@ -2044,7 +2044,7 @@ test.describe('Recepción · persistencia y sin conexión (casos 17 y 22)', () =
       const page = ctx.pages()[0] ?? (await ctx.newPage());
       await page.goto('/');
       await expect(page.getByTestId('caja')).toBeVisible();
-      await expect(page.getByTestId('tab-recepcion-count')).toHaveText('1');
+      await expect(page.getByTestId('menu-count')).toHaveText('1');
       await expectStock(page, 'primera', { physical: '100 kg', received: '100 kg' });
       await expectStock(page, 'semilla', { physical: '60 kg', received: '60 kg' });
       await subTab(page, 'historial');
@@ -2089,14 +2089,14 @@ test.describe('Recepción · persistencia y sin conexión (casos 17 y 22)', () =
     await page.reload(); // sigue sin red
     await expect(page.getByTestId('net')).toContainText('Sin internet');
     await expectStock(page, 'primera', { physical: '80 kg' });
-    await expect(page.getByTestId('tab-recepcion-count')).toHaveText('1');
+    await expect(page.getByTestId('menu-count')).toHaveText('1');
 
     await context.setOffline(false);
     await page.reload();
     await expect(page.getByTestId('net')).toContainText('En línea');
     await subTab(page, 'historial');
     await expect(page.getByTestId('rec-row')).toHaveCount(1);
-    await expect(page.getByTestId('tab-recepcion-count')).toHaveText('1');
+    await expect(page.getByTestId('menu-count')).toHaveText('1');
     await receive(page, 'primera', '20', 'Recepción R-2 registrada: +20 kg'); // y con red todo sigue funcionando
     const d = await readDb(page);
     expect(physicalOf(d, 'primera')).toBe(100000);
@@ -2718,7 +2718,7 @@ for (const phone of PHONES) {
         await expect(page.getByTestId('rec-supplier')).toBeFocused();
         await showKeyboard(page, phone);
         await expect(html(page)).toHaveClass(/kbd/);
-        await expect(page.getByTestId('tab-recepcion')).toBeHidden();
+        await expect(page.locator('.topbar'), 'con el teclado abierto la barra de arriba deja de estar fija y no tapa lo que se escribe').toHaveCSS('position', 'static');
         await watchTaps(page);
         await page.getByTestId('rec-save-draft').tap();
         await expectSolidTap(page, 'rec-save-draft');
@@ -2996,7 +2996,7 @@ test.describe('Recepción · primer uso, teclado «Ir», unidades y respaldo', (
 
     await expectStock(p2, 'primera', { physical: '95 kg', received: '95 kg' });
     await expectStock(p2, 'segunda', { physical: '0 g' });
-    await expect(p2.getByTestId('tab-recepcion-count')).toHaveText('1');
+    await expect(p2.getByTestId('menu-count')).toHaveText('1');
     await subTab(p2, 'historial');
     await expect(histRow(p2, 1).getByTestId('rec-row-net')).toHaveText('95 kg');
     await expect(histRow(p2, 1).getByTestId('rec-row-corrections')).toContainText('original 100 kg');

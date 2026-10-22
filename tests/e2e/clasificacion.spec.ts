@@ -1385,9 +1385,9 @@ test.describe('Caja · preferencias y precio pendiente', () => {
     await addClass(page, { name: SIN, caliber: '3X', price: '38' });
     await addStock(page, `${SIN} · 2X`, '10');
     const damaged: Array<Record<string, string>> = [
-      { 'limones.variety': 'id-que-ya-no-existe', 'limones.recent': '{"a":1}', 'limones.lastByVariety': '[1,2,3]' },
-      { 'limones.variety': '', 'limones.recent': 'esto no es json', 'limones.lastByVariety': 'tampoco' },
-      { 'limones.variety': 'x', 'limones.recent': '[1,null,{"a":2}]', 'limones.lastByVariety': '{"sin semilla":"otro-id-inexistente"}' },
+      { 'cc.variety': 'id-que-ya-no-existe', 'cc.recent': '{"a":1}', 'cc.lastByVariety': '[1,2,3]' },
+      { 'cc.variety': '', 'cc.recent': 'esto no es json', 'cc.lastByVariety': 'tampoco' },
+      { 'cc.variety': 'x', 'cc.recent': '[1,null,{"a":2}]', 'cc.lastByVariety': '{"sin semilla":"otro-id-inexistente"}' },
     ];
     for (const prefs of damaged) {
       await page.evaluate((p) => Object.entries(p).forEach(([k, v]) => localStorage.setItem(k, v)), prefs);

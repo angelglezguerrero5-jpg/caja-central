@@ -476,7 +476,7 @@ describe('respaldo', () => {
     await createSale(db, { cart: addLine([], p, kg(1)), paymentMethod: 'tarjeta', receivedCents: 0 });
     const antes = await exportBackup(db);
     const mal = {
-      app: 'sistema-venta-limones', version: 1, exportedAt: '', nextFolio: 1, nextValeFolio: 1,
+      app: 'caja-central', version: 1, exportedAt: '', nextFolio: 1, nextValeFolio: 1,
       products: [{ name: 'sin id' }], sales: [], shifts: [], cashMovements: [], stockMoves: [],
     };
     await expect(importBackup(db, mal)).rejects.toThrow('Respaldo dañado');

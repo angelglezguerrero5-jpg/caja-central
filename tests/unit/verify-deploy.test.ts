@@ -71,7 +71,7 @@ function buildSite(dir: string) {
   mkdirSync(join(dir, 'assets'), { recursive: true });
   writeFileSync(join(dir, 'assets', 'app.js'), 'console.log("app")');
   const urls = ['/', '/index.html', '/manifest.webmanifest', '/icons/apple-touch-icon.png', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/maskable-512.png', '/assets/app.js'];
-  writeFileSync(join(dir, 'sw.js'), `const CACHE = 'limones-0123456789ab';\nconst PRECACHE = ${JSON.stringify(urls)};\nself.addEventListener('fetch', () => {});\n`);
+  writeFileSync(join(dir, 'sw.js'), `const CACHE = 'caja-central-0123456789ab';\nconst PRECACHE = ${JSON.stringify(urls)};\nself.addEventListener('fetch', () => {});\n`);
 }
 
 const servers: Server[] = [];
@@ -181,7 +181,7 @@ describe('verify-deploy: cada defecto se marca FAIL y el código de salida es 1'
       name: 'sw.js con caché de un año',
       override: (p) =>
         p === '/sw.js'
-          ? { body: "const CACHE = 'limones-0123456789ab';\nconst PRECACHE = [\"/\"];\n", type: 'text/javascript', headers: { 'cache-control': 'public, max-age=31536000, immutable' } }
+          ? { body: "const CACHE = 'caja-central-0123456789ab';\nconst PRECACHE = [\"/\"];\n", type: 'text/javascript', headers: { 'cache-control': 'public, max-age=31536000, immutable' } }
           : undefined,
       expected: /^FAIL\s+sw\.js con caché larga/m,
     },

@@ -1,3 +1,4 @@
+import { BRAND } from './brand';
 /** Cada cuánto, como mínimo, se pregunta si hay una versión nueva de la app mientras está abierta. */
 export const UPDATE_CHECK_MS = 30 * 60 * 1000;
 
@@ -8,7 +9,7 @@ export function registerSW() {
   // lo que se esté capturando (la persona decide con «Actualizar ahora»; los datos viven en IndexedDB y no se tocan).
   const hadController = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (hadController) window.dispatchEvent(new Event('limones:update'));
+    if (hadController) window.dispatchEvent(new Event(`${BRAND.ns}:update`));
   });
   let registration: ServiceWorkerRegistration | undefined;
   window.addEventListener('load', () => {

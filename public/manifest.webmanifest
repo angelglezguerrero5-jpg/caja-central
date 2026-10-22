@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "Venta de Limones",
-  "short_name": "Limones",
-  "description": "Caja rápida offline para venta de limones",
+  "name": "Caja Central",
+  "short_name": "Caja",
+  "description": "Caja, entradas e inventario para vendedores de la Central de Abasto",
   "lang": "es-MX",
   "dir": "ltr",
   "start_url": "/",

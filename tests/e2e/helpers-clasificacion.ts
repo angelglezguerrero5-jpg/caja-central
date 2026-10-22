@@ -251,7 +251,7 @@ const dbProducts = (page: Page): Promise<DbProduct[]> =>
   page.evaluate(
     () =>
       new Promise<DbProduct[]>((resolve, reject) => {
-        const open = indexedDB.open('venta-limones');
+        const open = indexedDB.open('caja-central');
         open.onerror = () => reject(open.error);
         open.onsuccess = () => {
           const db = open.result;

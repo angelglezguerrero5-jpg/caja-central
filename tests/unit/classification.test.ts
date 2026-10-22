@@ -33,37 +33,38 @@ import type { Product, Unit } from '../../src/domain/types';
 type P = { name: string; origin?: string; quality?: string; caliber?: string; unit: Unit };
 const p = (o: Partial<P> & { name: string }): P => ({ unit: 'kg', ...o });
 
-describe('presets del catálogo (casos 1–7 del prompt)', () => {
-  it('1–2. variedades sin semilla y con semilla', () => {
-    expect([...VARIETY_PRESETS]).toEqual(['Sin semilla', 'Con semilla']);
-    expect(classificationKey(p({ name: 'Sin semilla' }))).not.toBe(classificationKey(p({ name: 'Con semilla' })));
+
+// Valores de EJEMPLO para probar el mecanismo (los atajos reales de la app son genéricos y casi vacíos).
+const SAMPLE_VARIETIES = ['Sin semilla', 'Con semilla'] as const;
+const SAMPLE_ORIGINS = ['Oaxaca', 'Michoacán'] as const;
+const SAMPLE_SIZES = ['1X', '2X', '3X'] as const;
+const SAMPLE_NUMS = ['200', '300', '400', '500'] as const;
+const SAMPLE_CALIBERS = [...SAMPLE_SIZES, ...SAMPLE_NUMS] as const;
+
+describe('atajos genéricos del catálogo', () => {
+  it('producto y origen no traen atajos: dependen del negocio', () => {
+    expect([...VARIETY_PRESETS]).toEqual([]);
+    expect([...ORIGIN_PRESETS]).toEqual([]);
+    expect([...CALIBER_NUMBER_PRESETS]).toEqual([]);
   });
 
-  it('3. procedencias Oaxaca y Michoacán, distintas entre sí', () => {
-    expect([...ORIGIN_PRESETS]).toEqual(['Oaxaca', 'Michoacán']);
-    const a = p({ name: 'Con semilla', origin: 'Oaxaca' });
-    const b = p({ name: 'Con semilla', origin: 'Michoacán' });
-    expect(sameClassification(a, b)).toBe(false);
-    expect(productLabel(a)).toBe('Con semilla · Oaxaca');
-    expect(productLabel(b)).toBe('Con semilla · Michoacán');
-  });
-
-  it('4. tamaños 1X, 2X y 3X', () => {
-    expect([...SIZE_PRESETS]).toEqual(['1X', '2X', '3X']);
-    const keys = SIZE_PRESETS.map((c) => classificationKey(p({ name: 'Sin semilla', caliber: c })));
+  it('tamaños Chico, Mediano y Grande son distintos entre sí', () => {
+    expect([...SIZE_PRESETS]).toEqual(['Chico', 'Mediano', 'Grande']);
+    const keys = SIZE_PRESETS.map((c) => classificationKey(p({ name: 'Chayote', caliber: c })));
     expect(new Set(keys).size).toBe(3);
+    expect([...CALIBER_PRESETS]).toHaveLength(3);
   });
 
-  it('5. calibres 200, 300, 400 y 500', () => {
-    expect([...CALIBER_NUMBER_PRESETS]).toEqual(['200', '300', '400', '500']);
-    const keys = CALIBER_NUMBER_PRESETS.map((c) => classificationKey(p({ name: 'Sin semilla', caliber: c })));
-    expect(new Set(keys).size).toBe(4);
-    expect([...CALIBER_PRESETS]).toHaveLength(7);
+  it('el procedencia distinta es otra clasificación', () => {
+    const a = p({ name: 'Chayote', origin: 'Veracruz' });
+    const b = p({ name: 'Chayote', origin: 'Puebla' });
+    expect(sameClassification(a, b)).toBe(false);
+    expect(productLabel(a)).toBe('Chayote · Veracruz');
   });
 
-  it('NO existe equivalencia entre 1X/2X/3X y 200–500 (son valores distintos)', () => {
-    for (const size of SIZE_PRESETS) {
-      for (const num of CALIBER_NUMBER_PRESETS) {
+  it('NO existe equivalencia entre tamaños y números de calibre (son valores distintos)', () => {
+    for (const size of SAMPLE_SIZES) {
+      for (const num of SAMPLE_NUMS) {
         expect(sameClassification(p({ name: 'Sin semilla', caliber: size }), p({ name: 'Sin semilla', caliber: num }))).toBe(false);
       }
     }
@@ -72,22 +73,19 @@ describe('presets del catálogo (casos 1–7 del prompt)', () => {
     expect(names).not.toMatch(/equiv|convert|tabla|map(ear|a)?De/i);
   });
 
-  it('6. calidades primera, segunda y tercera', () => {
+  it('calidades primera, segunda y tercera', () => {
     expect([...QUALITY_PRESETS]).toEqual(['Primera', 'Segunda', 'Tercera']);
-    expect(productLabel(p({ name: 'Sin semilla', quality: 'Tercera' }))).toBe('Sin semilla · Tercera');
+    expect(productLabel(p({ name: 'Jitomate', quality: 'Tercera' }))).toBe('Jitomate · Tercera');
   });
 
-  it('7. valores personalizados y no especificados', () => {
-    // No especificado = ausente, en cualquiera de sus escrituras
+  it('valores personalizados y no especificados', () => {
     for (const raw of ['', '   ', UNSPECIFIED.origin, UNSPECIFIED.quality, UNSPECIFIED.caliber, 'no especificada', 'SIN CLASIFICAR']) {
       expect(resolveClassValue(raw, QUALITY_PRESETS)).toBeUndefined();
       expect(isUnspecified(raw)).toBe(true);
     }
     expect(resolveClassValue(undefined, [])).toBeUndefined();
-    // Personalizado se conserva tal cual (sin imponer nada)
     expect(resolveClassValue('  Torreones  ', QUALITY_PRESETS)).toBe('Torreones');
     expect(resolveClassValue('Calibre   especial', CALIBER_PRESETS)).toBe('Calibre especial');
-    // 'Torreones' NO es un preset de ninguna lista
     for (const list of [VARIETY_PRESETS, ORIGIN_PRESETS, QUALITY_PRESETS, CALIBER_PRESETS]) {
       expect(list.map(normalizeKey)).not.toContain('torreones');
     }
@@ -95,10 +93,10 @@ describe('presets del catálogo (casos 1–7 del prompt)', () => {
 });
 
 describe('identidad y duplicados por diferencias de escritura', () => {
-  it('ignora mayúsculas, acentos, espacios y un "limón" inicial', () => {
+  it('ignora mayúsculas, acentos y espacios', () => {
     const base = classificationKey(p({ name: 'Sin semilla', origin: 'Michoacán', quality: 'Primera', caliber: '2X' }));
-    expect(classificationKey(p({ name: '  LIMÓN   sin  semilla ', origin: 'michoacan', quality: 'primera ', caliber: '2x' }))).toBe(base);
-    expect(varietyKey('Limon Con Semilla')).toBe(varietyKey('con semilla'));
+    expect(classificationKey(p({ name: '  SIN   semilla ', origin: 'michoacan', quality: 'primera ', caliber: '2x' }))).toBe(base);
+    expect(varietyKey('Chayote  VERDE')).toBe(varietyKey('chayote verde'));
   });
 
   it('distingue unidad y cada dimensión', () => {
@@ -111,18 +109,18 @@ describe('identidad y duplicados por diferencias de escritura', () => {
 
   it('canoniza contra valores conocidos para no crear duplicados', () => {
     expect(resolveClassValue('primera', QUALITY_PRESETS)).toBe('Primera');
-    expect(resolveClassValue('MICHOACAN', ORIGIN_PRESETS)).toBe('Michoacán');
-    expect(resolveClassValue('3x', CALIBER_PRESETS)).toBe('3X');
+    expect(resolveClassValue('MICHOACAN', SAMPLE_ORIGINS)).toBe('Michoacán');
+    expect(resolveClassValue('3x', SAMPLE_CALIBERS)).toBe('3X');
     expect(resolveClassValue('torreones', ['Torreones'])).toBe('Torreones');
-    expect(resolveVariety('Limón sin semilla', VARIETY_PRESETS)).toBe('Sin semilla');
-    expect(resolveVariety('  con   semilla', VARIETY_PRESETS)).toBe('Con semilla');
-    expect(resolveVariety('Persa', VARIETY_PRESETS)).toBe('Persa');
-    expect(resolveVariety('   ', VARIETY_PRESETS)).toBe('');
+    expect(resolveVariety('sin semilla', SAMPLE_VARIETIES)).toBe('Sin semilla');
+    expect(resolveVariety('  con   semilla', SAMPLE_VARIETIES)).toBe('Con semilla');
+    expect(resolveVariety('Persa', SAMPLE_VARIETIES)).toBe('Persa');
+    expect(resolveVariety('   ', SAMPLE_VARIETIES)).toBe('');
   });
 
   it('no confunde un valor parecido pero distinto', () => {
     expect(resolveClassValue('Primera A', QUALITY_PRESETS)).toBe('Primera A');
-    expect(resolveClassValue('2XL', CALIBER_PRESETS)).toBe('2XL');
+    expect(resolveClassValue('2XL', SAMPLE_CALIBERS)).toBe('2XL');
   });
 });
 
@@ -178,18 +176,18 @@ describe('valores conocidos y sugerencias', () => {
       { name: 'Sin semilla', quality: 'primera', caliber: 'Torreones' },
       { name: 'Persa', origin: 'Oaxaca', quality: 'Torreones' },
     ]);
-    expect(k.varieties).toEqual(['Sin semilla', 'Persa', 'Con semilla']);
+    expect(k.varieties).toEqual(['Sin semilla', 'Persa']); // sin atajos propios: solo lo ya usado
     expect(k.qualities).toEqual(['primera', 'Torreones', 'Segunda', 'Tercera']); // 'primera' (usada) gana a 'Primera'
-    expect(k.origins).toEqual(['Oaxaca', 'Michoacán']);
+    expect(k.origins).toEqual(['Oaxaca']);
     expect(k.calibers.slice(0, 1)).toEqual(['Torreones']);
     expect(customValues(k.qualities, QUALITY_PRESETS)).toEqual(['Torreones']);
   });
 
-  it('una variedad antigua "Limón con semilla" y el preset "Con semilla" son UNA sola variedad', () => {
+  it('un producto ya usado se sugiere con su ortografía; escribirlo parecido no crea otro', () => {
     const k = knownValues([{ name: 'Limón con semilla' }]);
-    expect(k.varieties).toEqual(['Limón con semilla', 'Sin semilla']); // el preset equivalente no se duplica
-    expect(resolveVariety('Con semilla', k.varieties)).toBe('Limón con semilla');
-    expect(customValues(k.varieties, VARIETY_PRESETS, varietyKey)).toEqual([]);
+    expect(k.varieties).toEqual(['Limón con semilla']);
+    expect(resolveVariety('limon CON semilla', k.varieties)).toBe('Limón con semilla');
+    expect(customValues(k.varieties, VARIETY_PRESETS, varietyKey)).toEqual(['Limón con semilla']);
   });
 });
 
@@ -218,10 +216,8 @@ describe('claves de identidad: casos límite (revisión)', () => {
     expect(key({ name: 'Sin semilla', caliber: 'No especificado' })).toBe(key({ name: 'Sin semilla' }));
   });
 
-  it('"Limón" inicial, plural y guion se ignoran; "Limón" solo queda como variedad', () => {
-    for (const v of ['Limón sin semilla', 'limones sin semilla', 'Limón-sin semilla', 'LIMON   SIN SEMILLA']) {
-      expect(varietyKey(v), v).toBe('sin semilla');
-    }
+  it('el producto se compara sin acentos ni mayúsculas, y "Limón" es un producto más (no se ignora)', () => {
+    expect(varietyKey('LIMÓN   persa')).toBe('limon persa');
     expect(varietyKey('Limón')).toBe('limon');
     expect(varietyKey('')).toBe('');
   });
@@ -234,10 +230,10 @@ describe('claves de identidad: casos límite (revisión)', () => {
   });
 
   it('"oaxaqueño" y "michoacano" se escriben como Oaxaca y Michoacán (sin deducir calidad ni precio)', () => {
-    expect(resolveClassValue('Oaxaqueño', ORIGIN_PRESETS, ORIGIN_ALIASES)).toBe('Oaxaca');
-    expect(resolveClassValue('MICHOACANA', ORIGIN_PRESETS, ORIGIN_ALIASES)).toBe('Michoacán');
-    expect(resolveClassValue('Veracruz', ORIGIN_PRESETS, ORIGIN_ALIASES)).toBe('Veracruz');
-    expect(resolveClassValue('oaxaqueño', ORIGIN_PRESETS)).toBe('oaxaqueño'); // sin alias solicitado no cambia nada
+    expect(resolveClassValue('Oaxaqueño', SAMPLE_ORIGINS, ORIGIN_ALIASES)).toBe('Oaxaca');
+    expect(resolveClassValue('MICHOACANA', SAMPLE_ORIGINS, ORIGIN_ALIASES)).toBe('Michoacán');
+    expect(resolveClassValue('Veracruz', SAMPLE_ORIGINS, ORIGIN_ALIASES)).toBe('Veracruz');
+    expect(resolveClassValue('oaxaqueño', SAMPLE_ORIGINS)).toBe('oaxaqueño'); // sin alias solicitado no cambia nada
   });
 });
 
@@ -246,7 +242,7 @@ describe('canonicalizeClass: la vista previa del formulario dice lo mismo que se
     classification.canonicalizeClass(all, input, existing);
 
   it('alias de procedencia, "no especificado" como ausente y ortografía de los atajos', () => {
-    expect(canon({ name: 'limón con semilla', origin: 'oaxaqueño', quality: 'primera' })).toEqual({
+    expect(canon({ name: 'con semilla', origin: 'oaxaqueño', quality: 'primera' }, [p({ name: 'Con semilla' })])).toEqual({
       name: 'Con semilla', origin: 'Oaxaca', quality: 'Primera', caliber: undefined,
     });
     expect(canon({ name: 'Sin semilla', origin: 'No especificada', quality: 'sin clasificar', caliber: 'N/A' })).toEqual({
@@ -256,7 +252,8 @@ describe('canonicalizeClass: la vista previa del formulario dice lo mismo que se
   });
 
   it('los calibres con espacio, × o prefijo se guardan con la escritura de los atajos (sin mezclar tamaños con números)', () => {
-    const c = (caliber: string) => canon({ name: 'Persa', caliber }).caliber;
+    const known = ['1X', '2X', '3X', '300', '400'].map((caliber) => p({ name: 'Persa', caliber }));
+    const c = (caliber: string) => canon({ name: 'Persa', caliber }, known).caliber;
     expect(c('3 x')).toBe('3X');
     expect(c('2 X')).toBe('2X');
     expect(c('1×')).toBe('1X');

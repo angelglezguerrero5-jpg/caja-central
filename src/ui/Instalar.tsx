@@ -1,3 +1,4 @@
+import { BRAND } from '../brand';
 import { Sheet } from './Sheet';
 
 /**
@@ -15,7 +16,7 @@ export function InstallSteps() {
       </li>
       <li>Elige <strong>«Añadir a pantalla de inicio»</strong>.</li>
       <li>Si aparece el interruptor <strong>«Abrir como app web»</strong>, déjalo encendido.</li>
-      <li>Toca <strong>«Añadir»</strong>. Desde ahora abre la app con el ícono nuevo (<strong>Limones</strong>), no desde Safari.</li>
+      <li>Toca <strong>«Añadir»</strong>. Desde ahora abre la app con el ícono nuevo (<strong>{BRAND.short}</strong>), no desde Safari.</li>
     </ol>
   );
 }

@@ -1,3 +1,4 @@
+import { BRAND } from '../brand';
 /**
  * Convenciones numéricas (evitan errores de punto flotante):
  *  - Dinero: centavos enteros (`...Cents`).
@@ -350,7 +351,7 @@ export interface FreightSettings {
 }
 
 export interface Backup {
-  app: 'sistema-venta-limones';
+  app: typeof BRAND.id;
   /** 1 = formato anterior (sin recepciones); 2 = con recepciones; 3 = actual (con fletes). 1 y 2 se aceptan al importar. */
   version: 1 | 2 | 3;
   exportedAt: string;

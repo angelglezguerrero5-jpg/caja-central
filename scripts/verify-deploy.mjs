@@ -148,7 +148,7 @@ async function main() {
       }
     })();
     check(Array.isArray(list) && list.length > 0, `el service worker precachea ${list?.length ?? 0} archivos`, 'no se pudo leer la lista PRECACHE de sw.js');
-    check(/const CACHE = 'limones-[0-9a-f]{12}'/.test(swText), 'la caché del service worker lleva versión', 'la caché del service worker no lleva versión limones-<hash>');
+    check(/const CACHE = 'caja-central-[0-9a-f]{12}'/.test(swText), 'la caché del service worker lleva versión', 'la caché del service worker no lleva versión caja-central-<hash>');
     check(!/\.put\(/.test(swText), 'el service worker no guarda respuestas al vuelo', 'el service worker usa .put(: guardaría datos de la red');
     if (Array.isArray(list)) {
       const missing = [];

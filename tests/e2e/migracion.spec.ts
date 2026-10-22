@@ -58,7 +58,7 @@ import {
  * en el navegador: la actualización real de IndexedDB al abrir la app, el aviso en pantalla, qué hacen varias ventanas a la
  * vez, el panel de error con la copia de emergencia y el reinicio real del navegador con el mismo perfil.
  *
- * Cómo se prepara el «teléfono con la app anterior»: se crea una base `venta-limones` en VERSIÓN 1 con el esquema real de v1
+ * Cómo se prepara el «teléfono con la app anterior»: se crea una base `caja-central` en VERSIÓN 1 con el esquema real de v1
  * (el MIGRATIONS[1] del último commit) desde una página del mismo origen que NO carga la app, se llena con datos de v1 y SOLO
  * entonces se abre la app. Las cifras esperadas se calcularon a mano desde esos datos (ver los comentarios).
  */
@@ -365,7 +365,7 @@ test.describe('Migración v1→v2 con datos previos (casos 24, 23, 25)', () => {
     const file = await exportBackupUi(page);
     await expectToast(page, 'Respaldo exportado (7 ventas, 0 recepciones)');
     expect(file.json.version).toBe(3);
-    expect(file.json.app).toBe('sistema-venta-limones');
+    expect(file.json.app).toBe('caja-central');
     expect(file.json.receptions).toEqual([]);
     expect(file.json.freights).toEqual([]);
     expect(file.json.nextReceptionFolio).toBe(1);
@@ -541,8 +541,8 @@ test.describe('Base que no se puede abrir: versión más nueva, migración falli
     await expect(page.getByTestId('fatal')).toBeVisible();
 
     const dump = await captureDownload(page, () => page.getByTestId('emergency-dump').click());
-    expect(dump.filename).toMatch(/^emergencia-limones-\d{4}-\d{2}-\d{2}\.json$/);
-    expect(dump.json).toMatchObject({ app: 'sistema-venta-limones', kind: 'emergency-raw-dump', database: 'venta-limones', version: 99 });
+    expect(dump.filename).toMatch(/^emergencia-caja-central-\d{4}-\d{2}-\d{2}\.json$/);
+    expect(dump.json).toMatchObject({ app: 'caja-central', kind: 'emergency-raw-dump', database: 'caja-central', version: 99 });
     expect(Object.keys(dump.json.stores).sort()).toEqual(Object.keys(before!.stores).sort());
     for (const [name, store] of Object.entries(before!.stores)) expect(dump.json.stores[name], `tabla «${name}» en la copia`).toEqual(store.rows);
     expect(dump.json.stores.tablaDelFuturo).toEqual([{ id: 'x1', dato: 'solo la app futura lo entiende' }]);
@@ -595,7 +595,7 @@ test.describe('Base que no se puede abrir: versión más nueva, migración falli
     await page.evaluate(
       () =>
         new Promise<void>((resolve, reject) => {
-          const req = indexedDB.open('venta-limones', 1);
+          const req = indexedDB.open('caja-central', 1);
           req.onsuccess = () => {
             (window as unknown as { __vieja: IDBDatabase }).__vieja = req.result;
             resolve();
@@ -639,7 +639,7 @@ test.describe('Base que no se puede abrir: versión más nueva, migración falli
     await nueva.evaluate(
       () =>
         new Promise<void>((resolve, reject) => {
-          const req = indexedDB.open('venta-limones', 4);
+          const req = indexedDB.open('caja-central', 4);
           req.onsuccess = () => {
             req.result.close();
             resolve();
@@ -722,7 +722,7 @@ test.describe('Actualización REAL desde la app anterior (caso 24, 19)', () => {
       testInfo.annotations.push({ type: 'actualización', description: `la app nueva apareció tras ${recargas} recarga(s) después de abrir con el service worker viejo` });
       console.log(`[migración real] la app nueva apareció tras ${recargas} recarga(s) después de abrir con el service worker viejo`);
       await expect(page.getByTestId('upgraded'), 'tras recargar debe verse la app NUEVA con su aviso de actualización').toBeVisible();
-      await expect(page.getByTestId('tab-recepcion')).toBeVisible();
+      await expect(page.getByTestId('menu-btn')).toBeVisible();
 
       // ── La base: v3 (la actual), y lo que creó la app anterior, idéntico
       const despues = await readRawDb(page);
@@ -795,7 +795,7 @@ test.describe('Reinicio real del navegador (caso 17)', () => {
       // Captura a medias (NO se registra): se guarda sola
       await fillReception(page, { variety: 'Con semilla', packaging: 'granel', mode: 'directo', net: '55', supplier: 'Pendiente de pesar' });
       await expect
-        .poll(() => page.evaluate(() => localStorage.getItem('limones.rec.form.v1')), { message: 'la captura en curso debería guardarse sola' })
+        .poll(() => page.evaluate(() => localStorage.getItem('cc.rec.form.v1')), { message: 'la captura en curso debería guardarse sola' })
         .toContain('Pendiente de pesar');
 
       const before = await readRawDb(page);
@@ -898,7 +898,7 @@ for (const phone of PHONES) {
       await vieja.evaluate(
         () =>
           new Promise<void>((resolve, reject) => {
-            const req = indexedDB.open('venta-limones', 1);
+            const req = indexedDB.open('caja-central', 1);
             req.onsuccess = () => {
               (window as unknown as { __vieja: IDBDatabase }).__vieja = req.result;
               resolve();
@@ -923,7 +923,7 @@ for (const phone of PHONES) {
       await nueva.evaluate(
         () =>
           new Promise<void>((resolve, reject) => {
-            const req = indexedDB.open('venta-limones', 4);
+            const req = indexedDB.open('caja-central', 4);
             req.onsuccess = () => {
               req.result.close();
               resolve();

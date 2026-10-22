@@ -39,8 +39,15 @@ export async function openApp(page: Page, opts: { seed?: boolean } = {}) {
   if (opts.seed ?? true) await seedVarieties(page);
 }
 
-export const tab = (page: Page, name: 'caja' | 'vales' | 'recepcion' | 'inventario' | 'corte' | 'mas') =>
-  page.getByTestId(`tab-${name}`).click();
+/** Pestañas de arriba (caja, vales, inventario, corte) y opciones del menú de los tres puntos (recepción, más). */
+export const tab = async (page: Page, name: 'caja' | 'vales' | 'recepcion' | 'inventario' | 'corte' | 'mas') => {
+  if (name === 'recepcion' || name === 'mas') {
+    await page.getByTestId('menu-btn').click();
+    await page.getByTestId(`menu-${name}`).click();
+    return;
+  }
+  await page.getByTestId(`tab-${name}`).click();
+};
 
 /** Venta en efectivo con billetes: devuelve tras ver el toast de guardado. */
 export async function sellCash(page: Page, kg: string, bills: number[]) {

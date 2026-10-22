@@ -1,3 +1,4 @@
+import { BRAND } from '../brand';
 import { useState } from 'preact/hooks';
 import { dumpRawDatabase } from '../db/emergency';
 import { errMsg } from './ctx';
@@ -12,7 +13,7 @@ export function EmergencyDump() {
   async function run() {
     try {
       const dump = await dumpRawDatabase();
-      downloadJson(dump, `emergencia-limones-${new Date().toISOString().slice(0, 10)}.json`);
+      downloadJson(dump, `emergencia-${BRAND.id}-${new Date().toISOString().slice(0, 10)}.json`);
       const n = Object.values(dump.stores).reduce((s, rows) => s + rows.length, 0);
       setMsg(`Listo: se descargó una copia con ${n} registros. Guárdala en un lugar seguro antes de hacer cualquier otra cosa.`);
     } catch (e) {

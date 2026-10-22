@@ -314,7 +314,7 @@ test('respaldo con registros dañados se rechaza y NO borra las ventas existente
   await openApp(page);
   await sellCash(page, '1', [50]);
   const evil = {
-    app: 'sistema-venta-limones', version: 1, exportedAt: '', nextFolio: 1, nextValeFolio: 1,
+    app: 'caja-central', version: 1, exportedAt: '', nextFolio: 1, nextValeFolio: 1,
     products: [{ name: 'sin id' }], sales: [], shifts: [], cashMovements: [], stockMoves: [],
   };
   await tab(page, 'mas');

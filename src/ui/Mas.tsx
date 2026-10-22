@@ -1,3 +1,4 @@
+import { BRAND } from '../brand';
 import { useEffect, useState } from 'preact/hooks';
 import { auditData, auditDatabase, type AuditResult } from '../db/audit';
 import { listUndoSnapshots, loadUndoSnapshot, saveUndoSnapshot, type UndoInfo } from '../db/undo';
@@ -11,7 +12,7 @@ import { isIOS, isStandalone } from './platform';
 import { Sheet } from './Sheet';
 
 export const APP_VERSION = '0.3.0';
-const LS_LAST_BACKUP = 'limones.lastBackupAt';
+const LS_LAST_BACKUP = `${BRAND.ns}.lastBackupAt`;
 /** Un respaldo de esta app pesa unos cuantos MB como mucho; algo mayor no es un respaldo (y podría tumbar el teléfono al leerlo). */
 const MAX_BACKUP_BYTES = 25 * 1024 * 1024;
 
@@ -37,8 +38,8 @@ export function backupAgeText(iso: string | null, now = Date.now()): { text: str
   return { text: days <= 0 ? 'hoy' : days === 1 ? 'ayer' : `hace ${days} días`, days: Math.max(days, 0) };
 }
 
-/** Nombre del archivo con la fecha y hora LOCALES: respaldo-limones-2026-10-10-1730.json */
-export const backupFileName = (d = new Date()) => `respaldo-limones-${toLocalInput(d).replace('T', '-').replace(':', '')}.json`;
+/** Nombre del archivo con la fecha y hora LOCALES: respaldo-caja-central-2026-10-10-1730.json */
+export const backupFileName = (d = new Date()) => `respaldo-${BRAND.id}-${toLocalInput(d).replace('T', '-').replace(':', '')}.json`;
 
 interface Pending {
   kind: 'file' | 'undo';
@@ -137,7 +138,7 @@ export function Mas() {
       const ready = prepared && prepared.version === version ? prepared.file : null;
       const file = ready ?? new File([JSON.stringify(await exportBackup(db), null, 2)], backupFileName(), { type: 'application/json' });
       if (!navigator.canShare({ files: [file] })) return void (await download());
-      await navigator.share({ files: [file], title: 'Respaldo de Venta de Limones' });
+      await navigator.share({ files: [file], title: `Respaldo de ${BRAND.name}` });
       markBackup();
       toast('Respaldo compartido');
     } catch (e) {

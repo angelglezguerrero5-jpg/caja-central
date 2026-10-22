@@ -66,7 +66,7 @@ export async function rawFreights(page: Page): Promise<Freight[]> {
   return page.evaluate(
     () =>
       new Promise<Freight[]>((resolve, reject) => {
-        const open = indexedDB.open('venta-limones');
+        const open = indexedDB.open('caja-central');
         open.onerror = () => reject(open.error);
         open.onsuccess = () => {
           const db = open.result;
@@ -90,7 +90,7 @@ export async function rawSettings(page: Page): Promise<unknown> {
   return page.evaluate(
     () =>
       new Promise<unknown>((resolve, reject) => {
-        const open = indexedDB.open('venta-limones');
+        const open = indexedDB.open('caja-central');
         open.onerror = () => reject(open.error);
         open.onsuccess = () => {
           const db = open.result;

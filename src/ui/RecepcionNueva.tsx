@@ -1,3 +1,4 @@
+import { BRAND } from '../brand';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import {
   DuplicateReceptionError,
@@ -35,10 +36,10 @@ import { NuevaVariedad } from './NuevaVariedad';
 import { ProductChips } from './ProductChips';
 import { Sheet } from './Sheet';
 
-const LS_PACKAGING = 'limones.rec.packaging';
-const LS_MODE = (pk: Packaging) => `limones.rec.mode.${pk}`;
+const LS_PACKAGING = `${BRAND.ns}.rec.packaging`;
+const LS_MODE = (pk: Packaging) => `${BRAND.ns}.rec.mode.${pk}`;
 /** Lo que se está capturando, para no perderlo si Android cierra la app en segundo plano. */
-const FORM_KEY = 'limones.rec.form.v1';
+const FORM_KEY = `${BRAND.ns}.rec.form.v1`;
 
 function lsGet(k: string): string | null {
   try {

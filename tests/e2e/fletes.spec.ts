@@ -597,7 +597,7 @@ test.describe('Fletes · respaldo y restauración', () => {
 
     await tab(page, 'mas');
     const file = await captureDownload(page, () => page.getByTestId('export').click());
-    expect(file.json).toMatchObject({ app: 'sistema-venta-limones', version: 3 });
+    expect(file.json).toMatchObject({ app: 'caja-central', version: 3 });
     expect(file.json.freights).toHaveLength(2);
     expect(file.json.freightSettings).toEqual({ validated: false, refMinMilli: kg(150), refMaxMilli: kg(250) });
     const rawBefore = await rawFreights(page);
